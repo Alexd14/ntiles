@@ -8,7 +8,7 @@ from ntiles.tears.backtest_tear import BacktestTear
 
 from ntiles.portals.base_portal import BaseGrouperPortalConstant
 from ntiles.portals.pricing_portal import PricingPortal
-from ntiles.tears.tilts_tear import TiltsTear
+from ntiles.tears.tilts_backtest_tear import TiltsBacktestTear
 
 
 class Ntile:
@@ -23,7 +23,6 @@ class Ntile:
         # Tear Sheets Below
         self._inspection_tear = None
         self._backtest_tear = None
-        self._tilts_tear = None
         self._ic_tear = None
 
     def _input_checks(self, factor_series) -> None:
@@ -167,7 +166,6 @@ class Ntile:
         # Tear Sheets Below
         self._inspection_tear = None
         self._backtest_tear = None
-        self._tilts_tear = None
         self._ic_tear = None
 
     def _run(self) -> None:
@@ -175,7 +173,7 @@ class Ntile:
         Runs all tear sheets that are set in the class
         :return: None
         """
-        tears = [self._inspection_tear, self._backtest_tear, self._tilts_tear, self._ic_tear]
+        tears = [self._inspection_tear, self._backtest_tear, self._ic_tear]
         for tear in tears:
             if tear:
                 tear.compute()
@@ -222,7 +220,8 @@ class Ntile:
     #
     @_start_up
     def full_tear(self, factor: pd.Series, ntiles: int, holding_period: int,
-                  long_short: bool = True, market_neutral=True, show_plots=True, show_uni=False) -> None:
+                  long_short: bool = True, market_neutral=True, show_plots=True, show_uni=False,
+                  show_ntile_tilts=False) -> None:
         """
         runs all tear sheets
         :param factor: @ntile_backtest_tear | @ntile_inspection_tear
@@ -232,17 +231,19 @@ class Ntile:
         :param market_neutral: @ntile_backtest_tear
         :param show_plots: @ntile_backtest_tear
         :param show_uni: @ntile_backtest_tear
+        :param show_ntile_tilts: @ntile_backtest_tear
         :return: None
         """
         self._inspection_tear = InspectionTear(self._factor_data)
-        self._backtest_tear = BacktestTear(self._ntile_matrix, self._formatted_returns, ntiles, holding_period,
-                                           long_short, market_neutral, show_plots, show_uni)
-        self._tilts_tear = TiltsTear(self._factor_data, self._backtest_tear, self._group_portal, long_short)
+        self._backtest_tear = TiltsBacktestTear(self._ntile_matrix, self._formatted_returns, ntiles, holding_period,
+                                                long_short, market_neutral, show_plots, show_uni, self._factor_data,
+                                                self._group_portal, show_ntile_tilts)
         self._ic_tear = ICTear(self._factor_data, self._formatted_returns, holding_period)
 
     @_start_up
     def ntile_backtest_tear(self, factor: pd.Series, ntiles: int, holding_period: int,
-                            long_short: bool = True, market_neutral=True, show_plots=True, show_uni=False):
+                            long_short: bool = True, market_neutral=True, show_plots=True, show_uni=False,
+                            show_ntile_tilts=False) -> None:
         """
         Creates a fan chart of cumulative returns for the given factor values.
         The factor values are ntile'd into ntiles number of bins
@@ -264,11 +265,11 @@ class Ntile:
         :param show_plots: should stats and plots be shown?
         :return: plots showing the return profile of the factor
         :param show_uni: Should universe return be shown in the spread plot?
+        :param show_ntile_weights: should we show each ntiles tilts?
         """
-        self._backtest_tear = BacktestTear(self._ntile_matrix, self._formatted_returns, ntiles, holding_period,
-                                           long_short, market_neutral, show_plots, show_uni)
-
-        self._tilts_tear = TiltsTear(self._factor_data, self._backtest_tear, self._group_portal, long_short)
+        self._backtest_tear = TiltsBacktestTear(self._ntile_matrix, self._formatted_returns, ntiles, holding_period,
+                                                long_short, market_neutral, show_plots, show_uni, self._factor_data,
+                                                self._group_portal, show_ntile_tilts)
 
     @_start_up
     def ntile_inspection_tear(self, factor: pd.Series, ntiles: int) -> None:
@@ -318,7 +319,6 @@ class Ntile:
             raise ValueError('Have not yet ran a IC tear yet!')
 
         self._ic_tear.cum_ret_to_clipboard()
-
 
     # @_start_up_no_ntiles
     # def ntile_tilts_tear(self, factor):

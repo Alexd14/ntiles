@@ -114,7 +114,7 @@ def plot_tilt_hist(series, ntile: str, group_name: str, extra_space=True):
     ax[0].barh(plotter_frame.index.tolist(), plotter_frame['weight'].tolist(), align='center',
                color=plotter_frame['colors'].tolist())
     ax[0].set(title=f'{ntile}, {group_name}'.title(), ylabel='Group', xlabel='Weight Relative to Universe')
-    ax[0].axhline(0, linestyle='-', color='black', lw=1)
+    ax[0].axvline(0, linestyle='-', color='black', lw=1)
 
     if extra_space:
         return ax[1]
