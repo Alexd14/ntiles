@@ -16,13 +16,13 @@ class TiltsBacktestTear(BacktestTear, ABC):
 
     def __init__(self, ntile_matrix: pd.DataFrame, daily_returns: pd.DataFrame, ntiles, holding_period: int,
                  long_short: bool, market_neutral: bool, show_plots: bool, show_uni: bool,
-                 factor_data: pd.DataFrame, group_portal: BaseGrouperPortalConstant, show_ntile_tilts:bool):
+                 factor_data: pd.DataFrame, group_portal: BaseGrouperPortalConstant, show_ntile_tilts: bool):
 
         super().__init__(ntile_matrix, daily_returns, ntiles, holding_period, long_short, market_neutral, show_plots,
                          show_uni)
-        self.factor_data = factor_data
-        self.group_portal = group_portal
-        self.show_ntile_tilts = show_ntile_tilts
+        self._factor_data = factor_data
+        self._group_portal = group_portal
+        self._show_ntile_tilts = show_ntile_tilts
 
         self._daily_group_weights = {}
         self._full_group_tilt_avg = {}
@@ -34,7 +34,7 @@ class TiltsBacktestTear(BacktestTear, ABC):
         """
         super().compute()
 
-        if self.group_portal is not None:
+        if (self._group_portal is not None) and (not self._show_ntile_tilts):
             self.compute_tilts()
             self.compute_plots()
 
@@ -54,29 +54,28 @@ class TiltsBacktestTear(BacktestTear, ABC):
         have to use self.factor_data
         :return: None
         """
-        group_info = self.group_portal.group_information
+        group_info = self._group_portal.group_information
         center_weight = group_info.groupby(group_info).count() / group_info.shape[0]
         center_weight = utils.remove_cat_index(center_weight)
 
-        if self.show_ntile_tilts:
+        if self._show_ntile_tilts:
             ntile_keys = self.daily_weights.keys()
         else:
             ntile_keys = [min(self.daily_weights.keys()), max(self.daily_weights.keys())]
 
-        group_col = None
+        new_col = self.daily_weights[ntile_keys[0]].columns.astype(str).map(self._group_portal.group_mapping)
+
         for ntile in ntile_keys:
+            frame = self.daily_weights[ntile]
+            frame.columns = new_col
             frame = self.daily_weights[ntile].stack().to_frame('weight')
-
-            if group_col is None:
-                group_col = frame.index.get_level_values('id').astype(str).map(self.group_portal.group_mapping)
-
-            frame['group'] = group_col
+            frame.index.names = ['date', 'group']
 
             weights_unstacked = frame.groupby(['date', 'group']).sum().sub(center_weight, level=1, axis=0).unstack()
             weights_unstacked.columns = weights_unstacked.columns.droplevel(0)
 
             self._daily_group_weights[ntile] = weights_unstacked
-            self._full_group_tilt_avg[ntile] = (frame.groupby(['group']).sum().weight
+            self._full_group_tilt_avg[ntile] = (frame.groupby('group').sum().weight
                                                 / frame.index.levels[0].unique().shape[0]
                                                 - center_weight)
 
@@ -96,7 +95,7 @@ class TiltsBacktestTear(BacktestTear, ABC):
         for ntile in self._daily_group_weights.keys():
             if 'Long Short' == ntile and not self.long_short:
                 continue
-            if 'Ntile' in ntile and not self.show_ntile_tilts:
+            if 'Ntile' in ntile and not self._show_ntile_tilts:
                 continue
-            ax = plotter.plot_tilt_hist(self._full_group_tilt_avg[ntile], ntile, self.group_portal.name)
-            plotter.plot_tilts(self._daily_group_weights[ntile], ntile, self.group_portal.name, ax)
+            ax = plotter.plot_tilt_hist(self._full_group_tilt_avg[ntile], ntile, self._group_portal.name)
+            plotter.plot_tilts(self._daily_group_weights[ntile], ntile, self._group_portal.name, ax)

@@ -122,10 +122,11 @@ def plot_tilt_hist(series, ntile: str, group_name: str, extra_space=True):
     plt.show()
 
 
-def plot_timeseries_ic(ic_series: pd.Series, holding_period):
+def plot_timeseries_ic(ic_series: pd.Series, holding_period: int):
     """
     plots the daily time series IC
-    :param ic_series: series of IC to plot
+    :param ic_series: series of IC to plot index: pd.Period
+    :param holding_period: how long the holding period is for the IC
     :return: None
     """
     ic_frame = ic_series.to_frame('IC')
@@ -135,6 +136,19 @@ def plot_timeseries_ic(ic_series: pd.Series, holding_period):
     ic_frame.plot(ax=ax, title=f'IC {holding_period} Day Holding Period')
     ax.get_lines()[1].set_linewidth(3)
     ax.axhline(0, linestyle='-', color='black', lw=1)
+    plt.show()
+
+
+def plot_auto_corr(ac_series: pd.Series, holding_period: int) -> None:
+    """
+    plots the daily time series IC
+    :param ac_series: series of auto corr to plot index: pd.Period
+    :param holding_period: how long the holding period is for the IC
+    :return: None
+    """
+    _, ax = plt.subplots(1, 1, figsize=(9, 4))
+    ac_series.plot(ax=ax, title=f'Auto Correlation {holding_period} Day Holding Period')
+    ax.axhline(ac_series.median(), linestyle=(0, (5, 10)), color='black', lw=1)
     plt.show()
 
 
@@ -154,6 +168,7 @@ def render_table(table, output=None) -> None:
     """
     displays a table to the user
     :param table: the table to display
+    :param output: the output we should render
     :return: None
     """
     if output:

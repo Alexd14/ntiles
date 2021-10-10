@@ -162,7 +162,7 @@ class BacktestTear(BaseTear, ABC):
         controls displaying visuals to the user
         :return: None
         """
-        print('Backtest')
+        print('Ntile Backtest')
         cum_ret = stats.cum_returns(self._daily_tile_returns)
 
         # ntile stats

@@ -82,7 +82,7 @@ class ICTear(BaseTear, ABC):
             'IC Skew': self.daily_ic.skew()
         }
 
-        self.ic_stats = pd.Series(stats).round(3).to_frame('').transpose()
+        self.ic_stats = pd.Series(stats).round(3).to_frame(f'{self.holding_period}D').transpose()
 
     #
     # Plotting
