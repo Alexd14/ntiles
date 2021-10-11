@@ -10,7 +10,7 @@ TILTS_COLOR_MAP = mpl.cm.get_cmap('tab20')
 IC_COLOR_MAP = mpl.cm.get_cmap('tab10')
 
 
-def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title):
+def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title: str):
     """
     generates cumulative return plot for a ntiles returns series
     if cols are empty list returns None
@@ -26,7 +26,7 @@ def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title):
            yscale='symlog')
 
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
-    #ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    # ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
     ax.axhline(1, linestyle='-', color='black', lw=1)
     fig.autofmt_xdate()
@@ -53,7 +53,7 @@ def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int):
     return ax
 
 
-def plot_inspection_data(table, title, ylabel, decimals=0) -> None:
+def plot_inspection_data(table: pd.DataFrame, title: str, ylabel: str, decimals: float = 0.0) -> None:
     """
     plots the inspection data for inspection tear sheets
     :param table: the table to plot
@@ -67,7 +67,7 @@ def plot_inspection_data(table, title, ylabel, decimals=0) -> None:
     ax.set(title=title, ylabel=ylabel)
     table.plot(lw=2, ax=ax, cmap=RETURN_COLOR_MAP)
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
-    #ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    # ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter(f'%.{decimals}f'))
     fig.autofmt_xdate()
 
@@ -92,12 +92,12 @@ def plot_tilts(frame: pd.DataFrame, ntile: str, group_name: str, ax=None):
     ax.set(title=f'{ntile}, {group_name}'.title(), ylabel='Weight In Ntile')
     frame.plot(lw=2, ax=ax, cmap=TILTS_COLOR_MAP, legend=None)
     ax.axhline(0, linestyle='-', color='black', lw=1)
-    #ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    # ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter(f'%.2f'))
     plt.show()
 
 
-def plot_tilt_hist(series, ntile: str, group_name: str, extra_space=True):
+def plot_tilt_hist(series, ntile: str, group_name: str, extra_space: bool = True):
     """
     Plots the histogram group tilts for a single ntile
     :param series: frame containing the avg tilts, columns: group, index: pd.Period
@@ -168,7 +168,7 @@ def plot_ic_horizon(horizon_frame: pd.DataFrame):
     plt.show()
 
 
-def render_heat_table(frame) -> None:
+def render_heat_table(frame: pd.DataFrame) -> None:
     """
     renders a dataframe as a heatmap
     :param frame: the frame to render
@@ -180,7 +180,7 @@ def render_heat_table(frame) -> None:
     render_table(styled)
 
 
-def render_table(table, output=None) -> None:
+def render_table(table: pd.DataFrame, output: str = None) -> None:
     """
     displays a table to the user
     :param table: the table to display
