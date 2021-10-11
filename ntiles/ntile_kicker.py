@@ -27,12 +27,6 @@ class Ntile:
         self._ntile_matrix = None
         self._formatted_returns = None
 
-        # Tear Sheets Below
-        self._inspection_tear = None
-        self._backtest_tear = None
-        self._ic_tear = None
-        self._turnover_tear = None
-
     def _input_checks(self, factor_series) -> None:
         """
         checks the factor series to ensure it meet requirements to run a tearsheet
@@ -186,15 +180,28 @@ class Ntile:
     def full_tear(self, factor: pd.Series, ntiles: int, holding_period: int, long_short: bool = True,
                   market_neutral=True, show_uni=False, show_ntile_tilts=False) -> Dict[str, BaseTear]:
         """
-        runs all tear sheets
-        :param factor: @ntile_backtest_tear | @ntile_inspection_tear
-        :param ntiles: @ntile_backtest_tear | @ntile_inspection_tear
-        :param holding_period: @ntile_backtest_tear
-        :param long_short: @ntile_backtest_tear
-        :param market_neutral: @ntile_backtest_tear
-        :param show_uni: @ntile_backtest_tear
-        :param show_ntile_tilts: @ntile_backtest_tear
-        :return: None
+        Creates basic visualizations of the factor data distribution by ntile and how complete the data is
+        Creates a fan chart of cumulative returns for the given factor values.
+        Creates a IC time series for the factor value and the forward returns
+        Createa a turnover sheet showing how often the factor data will turn over
+
+        The in the cumulative return plot, each value represents the cumulative return up to that days close.
+        Returns are not shifted each value represents portfolios value on the close of that day.
+
+        A set of weights is generated for each day based off factor quantile.
+        The portfolio is rebalanced daily, each days 1/holding_period of the portfolio is rebalanced.
+        All positions are equally weighted.
+
+        :param factor: The factor values being tested.
+            index: (pd.Period, _asset_id)
+            values: (factor_value)
+        :param holding_period: How long we want to hold positions for, represents days
+        :param ntiles: amount of bins we are testing (1 is high factor value n is low value)
+        :param long_short: show we compute the spread between ntiles: (1 - n)
+        :param market_neutral: subtract out the universe returns from the ntile returns?
+        :return: plots showing the return profile of the factor
+        :param show_uni: Should universe return be shown in the spread plot?
+        :param show_ntile_tilts: should we show each ntiles tilts?
         """
         self._prep_for_run(factor, ntiles)
         tears = {'inspection_tear': InspectionTear(factor_data=self._factor_data),
@@ -247,10 +254,13 @@ class Ntile:
 
     def ntile_inspection_tear(self, factor: pd.Series, ntiles: int) -> Dict[str, BaseTear]:
         """
-        runs InspectionTear
-        :param factor: the factor data to inspect
+        creates visuals showing the factor data over time
+        only calculates IC for when the asset is in the universe
+        :param factor: The factor values being tested.
+            index: (pd.Period, _asset_id)
+            values: (factor_value)
         :param ntiles: the number of ntiles
-        :return: None
+        :return: Dict of InspectionTear
         """
         self._prep_for_run(factor, ntiles)
         tears = {'inspection_tear': InspectionTear(factor_data=self._factor_data)}
@@ -259,12 +269,12 @@ class Ntile:
 
     def ntile_ic_tear(self, factor: pd.Series, holding_period: int) -> Dict[str, BaseTear]:
         """
-        runs ICTear
+        creates visuals showing the ic over time
         :param factor: The factor values being tested.
             index: (pd.Period, _asset_id)
             values: (factor_value)
         :param holding_period: How long we want to hold positions for, represents days
-        :return: None
+        :return: Dict of ICTear
         """
         self._prep_for_run(factor, 1)
         tears = {'ic_tear': ICTear(factor_data=self._factor_data, daily_returns=self._formatted_returns,
@@ -274,22 +284,21 @@ class Ntile:
 
     def ntile_turnover_tear(self, factor: pd.Series, holding_period: int) -> Dict[str, BaseTear]:
         """
-        runs TurnoverTear
+        Creates visuals showing the turnover over time
         :param factor: The factor values being tested.
            index: (pd.Period, _asset_id)
            values: (factor_value)
         :param holding_period: How long we want to hold positions for, represents days
-        :return: None
+        :return: Dict of TurnoverTear
         """
         self._prep_for_run(factor, 1)
         tears = {'turnover_tear': TurnoverTear(factor_data=self._factor_data, holding_period=holding_period)}
         self._run(tears)
         return tears
 
-    def ntile_ic_frontier(self, factor: pd.Series, intervals: Iterable[int], show_individual: bool = False) -> \
+    def ntile_ic_horizon(self, factor: pd.Series, intervals: Iterable[int], show_individual: bool = False) -> \
             Dict[str, BaseTear]:
         """
-        runs the ICFrontier tear
         Shows the curve of the information coefficient over various holding periods
 
         :param factor: The factor values being tested.
@@ -297,6 +306,7 @@ class Ntile:
            values: (factor_value)
         :param intervals: an iterable that contains the holding periods we would like to make the IC frontier for
         :param show_individual: should each individual IC time series be show for every interval
+        :return: Dict of ICHorizonTear
         """
         self._prep_for_run(factor, 1)
         tears = {
