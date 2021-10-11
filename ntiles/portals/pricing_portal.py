@@ -22,7 +22,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         :param pricing_field: what field to use for pricing data
         :param adjustor_field: What field to use for adjusting the pricing data
         :param db: the data base to use
-        :param collection: the collection to query
+        :param collection: the _collection to query
         :param trading_calender: the trading calendar to use to verify dates
         """
         super().__init__(assets, start.to_period('D'), end.to_period('D'))
@@ -38,7 +38,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
     def delta_data(self):
         """
         :return: unstacked daily asset returns
-            col: asset_id; index: pd.period; values: daily asset returns
+            col: _asset_id; index: pd.period; values: daily asset returns
         """
         if self._period_delta is None:
             self._period_delta = self.raw_data.unstack().pct_change(1).iloc[1:].fillna(0)
@@ -62,7 +62,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
     @property
     def assets(self) -> List[int]:
         """
-        casting to int due to db problem must fix
+        casting to int due to _db problem must fix
         :return: The id's of assets we have pricing data for
         """
         return self._adjusted_pricing.index.get_level_values('id').astype(int).unique().tolist()
@@ -95,7 +95,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         pricing_df[pricing_field] = pricing_df[pricing_field] / pricing_df[adjustor_field]
         pricing_df['date'] = pricing_df['date'].dt.to_period(freq='D')
 
-        # currently code is requiring lpermno input wont work with tickers need to fix db
+        # currently code is requiring lpermno input wont work with tickers need to fix _db
         pricing_df['id'] = pricing_df['lpermno'].astype(int)
         pricing_df = pricing_df.set_index(['date', 'id'])
 
@@ -108,7 +108,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         prints a summary of query and tells you what id's were not able to be found in the query
         :return: None
         """
-        query_assets = self._adjusted_pricing.index.get_level_values('date')
+        query_assets = self._adjusted_pricing.index.get_level_values('date').astype(str)
         not_found_assets = set(assets) - set(query_assets)
         if len(not_found_assets) == 0:
             print('All assets retrieved in query!')

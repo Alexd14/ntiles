@@ -11,7 +11,7 @@ class InspectionTear(BaseTear, ABC):
 
     def __init__(self, factor_data):
         """
-        :param factor_data: factor_data from ntiles
+        :param factor_data: factor_data from Ntiles
         """
         super().__init__()
         self._factor_data = factor_data
@@ -21,14 +21,18 @@ class InspectionTear(BaseTear, ABC):
         kicks off the tearsheet
         :return: None
         """
-        # summary sheet: mean, median, standard deviation, % of total values in bin,
-        # data points over time all
-        # data point over time ntile
-        # mean value of factor per ntile over time
-        self.make_summary_frame()
-        self.timeseries_plots()
+        self.make_summary()
 
-    def make_summary_frame(self):
+    def plot(self) -> None:
+        """
+        plots the tearsheet
+        """
+        self.summary_plots()
+
+    def make_summary(self) -> None:
+        """
+        calculates the summary statics for the factor by Ntile
+        """
         quantile_stats = self._factor_data.groupby('ntile').agg(['median', 'std', 'min', 'max', 'count']).factor
         quantile_stats['count %'] = quantile_stats['count'] / quantile_stats['count'].sum() * 100
 
@@ -39,7 +43,10 @@ class InspectionTear(BaseTear, ABC):
 
         plotter.render_table(quantile_stats, 'Quantiles Statistics')
 
-    def timeseries_plots(self):
+    def summary_plots(self) -> None:
+        """
+        plots the the summary of the factor
+        """
         no_index_factor_data = self._factor_data.reset_index().dropna()
         date_agg = no_index_factor_data.groupby('date')
         date_ntile_agg = no_index_factor_data.groupby(['date', 'ntile'])

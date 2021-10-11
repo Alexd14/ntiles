@@ -1,11 +1,13 @@
 from abc import ABC
+from typing import Optional
+
 import pandas as pd
 
 from .backtest_tear import BacktestTear
 from .. import plotter
 from .. import utils
 
-from ntiles.portals.base_portal import BaseGrouperPortalConstant
+from ..portals.base_portal import BaseGrouperPortalConstant
 
 
 class TiltsBacktestTear(BacktestTear, ABC):
@@ -15,11 +17,22 @@ class TiltsBacktestTear(BacktestTear, ABC):
     """
 
     def __init__(self, ntile_matrix: pd.DataFrame, daily_returns: pd.DataFrame, ntiles, holding_period: int,
-                 long_short: bool, market_neutral: bool, show_plots: bool, show_uni: bool,
-                 factor_data: pd.DataFrame, group_portal: BaseGrouperPortalConstant, show_ntile_tilts: bool):
+                 long_short: bool, market_neutral: bool, show_uni: bool, factor_data: pd.DataFrame,
+                 group_portal: Optional[BaseGrouperPortalConstant], show_ntile_tilts: bool):
+        """
+        :param ntile_matrix: unstacked and formatted ntiles prepared by Ntiles
+        :param daily_returns: unstacked and formatted daily returns from Ntiles
+        :param holding_period: How long we want to hold positions for, represents days
+        :param ntiles: amount of bins we are testing (1 is high factor value n is low value)
+        :param long_short: show we compute the spread between ntiles: (1 - n)
+        :param market_neutral: subtract out the universe returns from the ntile returns?
+        :param show_uni: should universe return be shown in the spread plot?
+        :param factor_data: the factor data from Ntiles
+        :param group_portal: the group portal holding the groups. If this is None then the exposures will not be shown
+        :param show_ntile_tilts: Should we show the exposures for each individual ntile?
+        """
 
-        super().__init__(ntile_matrix, daily_returns, ntiles, holding_period, long_short, market_neutral, show_plots,
-                         show_uni)
+        super().__init__(ntile_matrix, daily_returns, ntiles, holding_period, long_short, market_neutral, show_uni)
         self._factor_data = factor_data
         self._group_portal = group_portal
         self._show_ntile_tilts = show_ntile_tilts
@@ -34,9 +47,16 @@ class TiltsBacktestTear(BacktestTear, ABC):
         """
         super().compute()
 
-        if (self._group_portal is not None) and (not self._show_ntile_tilts):
+        if (self._group_portal is not None) and (self._show_ntile_tilts or self.long_short):
             self.compute_tilts()
-            self.compute_plots()
+
+    def plot(self) -> None:
+        """
+        plots the tear sheet
+        """
+        super().plot()
+        if (self._group_portal is not None) and (self._show_ntile_tilts or self.long_short):
+            self.make_plots()
 
     def compute_tilts(self):
         """
@@ -90,7 +110,7 @@ class TiltsBacktestTear(BacktestTear, ABC):
         self._full_group_tilt_avg['Long Short'] = self._daily_group_weights['Long Short'].stack().groupby(
             'group').mean()
 
-    def compute_plots(self):
+    def make_plots(self):
         print('Weights By Group')
         for ntile in self._daily_group_weights.keys():
             if 'Long Short' == ntile and not self.long_short:

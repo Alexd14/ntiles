@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Iterable
 
 import pandas as pd
 
@@ -10,12 +11,16 @@ from ntiles import utils
 class ICTear(BaseTear, ABC):
     """
     Computes IC from the given factor and returns
+
+    Currently will only measure IC for days a company is in the universe
+    Example: AAPl is in the univere on 1/10 but not in universe on 11/10 if we have greater than 10 day holding period
+        that asset wint count in the IC calculation
     """
 
     def __init__(self, factor_data: pd.DataFrame, daily_returns: pd.DataFrame, holding_period: int):
         """
-        :param factor_data: factordata to look at
-        :param daily_returns: daily returns we are calculating the IC on
+        :param factor_data: factor data to look at must be from Ntiles
+        :param daily_returns: daily returns we are calculating the IC on must be from Ntiles
         :param holding_period: Holding period we are calculating IC for
         """
         super().__init__()
@@ -26,18 +31,10 @@ class ICTear(BaseTear, ABC):
         self.daily_ic = None
         self.ic_stats = None
 
-    def compute(self) -> None:
-        """
-        runs the functions to compute the IC
-        :return: None
-        """
-        self.compute_ic()
-        self.plot_ic()
-
     #
     # Calculation
     #
-    def compute_ic(self) -> None:
+    def compute(self) -> None:
         """
         master function for computing the IC
         :return: None
@@ -53,7 +50,7 @@ class ICTear(BaseTear, ABC):
         self.factor_data.index.names = ['date', 'id']
 
         # slicing off factor values we dont have forward return data for
-        factor_unstacked = self.factor_data['factor'].unstack().iloc[:-self.holding_period]
+        factor_unstacked = self.factor_data['factor'].unstack()#.iloc[:-self.holding_period]
         forward_returns = self.compute_forward_returns().reindex_like(factor_unstacked)
 
         ic_array = utils.correlation_2d(factor_unstacked.to_numpy(), forward_returns.to_numpy())
@@ -77,6 +74,7 @@ class ICTear(BaseTear, ABC):
         std_ic = self.daily_ic.std()
         stats = {
             'IC Mean': mean_ic,
+            'IC Median': self.daily_ic.median(),
             'IC Std': std_ic,
             'Risk Adjusted IC': mean_ic / std_ic,
             'IC Skew': self.daily_ic.skew()
@@ -87,7 +85,7 @@ class ICTear(BaseTear, ABC):
     #
     # Plotting
     #
-    def plot_ic(self) -> None:
+    def plot(self) -> None:
         """
         plots the IC data in self.daily_ic
         :return: None
@@ -107,3 +105,46 @@ class ICTear(BaseTear, ABC):
         :return: None
         """
         self.daily_ic.to_clipboard()
+
+
+class ICHorizonTear(BaseTear, ABC):
+    """
+    Computes the IC horizon tear
+    Will give insight into optimal holding periods for the factor
+    """
+
+    def __init__(self, factor_data: pd.DataFrame, daily_returns: pd.DataFrame, intervals: Iterable[int],
+                 show_individual):
+        """
+        :param factor_data: The factor values being tested, must be from Ntiles
+        :param daily_returns: matrix of returns from Ntiles
+        :param intervals: an iterable that contains the holding periods we would like to make the IC frontier for
+        """
+        super().__init__()
+        self._factor_data = factor_data
+        self._daily_returns = daily_returns
+        self._intervals = sorted(list(intervals))
+        self._show_individual = show_individual
+
+        self.tears = {}
+        self._ic_horizon = None
+
+    def compute(self) -> None:
+        """
+        runs a IC tear for all the periods we want to test over
+        """
+        for interval in self._intervals:
+            self.tears[interval] = ICTear(self._factor_data, self._daily_returns, interval)
+            self.tears[interval].compute()
+
+        self._ic_horizon = pd.concat([tear.ic_stats for tear in self.tears.values()])
+
+    def plot(self) -> None:
+        """
+        plots the IC frontier and the Time series IC
+        """
+        plotter.plot_ic_horizon(self._ic_horizon.drop(['IC Skew'], axis=1))
+        plotter.render_table(self._ic_horizon)
+        if self._show_individual:
+            for ic_tear in self.tears.values():
+                ic_tear.plot()

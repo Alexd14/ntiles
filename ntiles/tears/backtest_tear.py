@@ -10,11 +10,11 @@ from ntiles import plotter, stats, utils
 
 class BacktestTear(BaseTear, ABC):
     """
-    Computes cumulative returns from the given factor and pricing data
+    Computes returns and stats from the given factor and pricing data
     """
 
     def __init__(self, ntile_matrix: pd.DataFrame, daily_returns: pd.DataFrame, ntiles, holding_period: int,
-                 long_short: bool, market_neutral: bool, show_plots: bool, show_uni: bool):
+                 long_short: bool, market_neutral: bool, show_uni: bool):
         """
         :param ntile_matrix: unstacked and formatted ntiles prepared by Ntiles
         :param daily_returns: unstacked and formatted daily returns from Ntiles
@@ -22,9 +22,7 @@ class BacktestTear(BaseTear, ABC):
         :param ntiles: amount of bins we are testing (1 is high factor value n is low value)
         :param long_short: show we compute the spread between ntiles: (1 - n)
         :param market_neutral: subtract out the universe returns from the ntile returns?
-        :param show_plots: should stats and plots be shown?
-        :return: plots showing the return profile of the factor
-        :param show_uni: uhould universe return be shown in the spread plot?
+        :param show_uni: suhould universe return be shown in the spread plot?
         """
 
         super().__init__()
@@ -35,7 +33,6 @@ class BacktestTear(BaseTear, ABC):
         self.holding_period = holding_period
         self.long_short = long_short
         self.market_neutral = market_neutral
-        self.show_plots = show_plots
         self.show_uni = show_uni
 
         self.daily_weights = {}
@@ -43,10 +40,16 @@ class BacktestTear(BaseTear, ABC):
         self._daily_tile_returns = None
 
     def compute(self) -> None:
+        """
+        method to run the backtest
+        """
         self.kick_backtest()
 
-        if self.show_plots:
-            self.kick_visuals()
+    def plot(self):
+        """
+        method to plot the data for the backtest
+        """
+        self.kick_visuals()
 
     #
     # Vectorized Ntile Backtest
@@ -77,7 +80,7 @@ class BacktestTear(BaseTear, ABC):
     def _get_ntile_returns_helper(self) -> pd.DataFrame:
         """
         Helper to get the returns for each ntile on each day
-        :return:
+        :return: data frame index: pd.period; columns: Ntile; values: daily returns
         """
         np_ntile_matrix = self.ntile_matrix.to_numpy()
         np_asset_returns_matrix = self.daily_returns.to_numpy()

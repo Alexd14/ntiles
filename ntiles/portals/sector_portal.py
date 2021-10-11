@@ -8,33 +8,34 @@ from ntiles.portals.base_portal import BaseGrouperPortalConstant
 
 
 class SectorPortal(BaseGrouperPortalConstant, ABC):
-    def __init__(self, passed_assets: List[str], asset_id='lpermno', db: str = 'equity', collection: str = 'crsp'):
+    def __init__(self, passed_assets: List[str], asset_id: str = 'lpermno', db: str = 'equity',
+                 collection: str = 'crsp'):
         """
-        :param assets: the assets to get the sector data for must be lpermno
+        :param asset_id: the assets to get the sector data for
         :param asset_id: what is the id of the asset, must be recognised by equity_db
         :param db: name of the db
         :param collection: name of the collection
         """
         super().__init__(passed_assets, 'GIC Sector')
-        self.passed_assets = passed_assets
-        self.asset_id = asset_id
-        self.db = db
-        self.collection = collection
+        self._passed_assets = passed_assets
+        self._asset_id = asset_id
+        self._db = db
+        self._collection = collection
 
-        self.sectors = None
-        self.set_sectors()
+        self._sectors = None
+        self._set_sectors()
 
     @property
     def group_information(self) -> pd.Series:
         """
-        gets the gic sectors for the give assets
-        :return: DataFrame of GIC sectors for the given assets
+        gets the gic _sectors for the give assets
+        :return: DataFrame of GIC _sectors for the given assets
         """
-        if self.sectors is not None:
-            return self.sectors
+        if self._sectors is not None:
+            return self._sectors
 
-        self.set_sectors()
-        return self.sectors
+        self._set_sectors()
+        return self._sectors
 
     @property
     def group_mapping(self):
@@ -43,17 +44,16 @@ class SectorPortal(BaseGrouperPortalConstant, ABC):
         """
         return self.group_information.to_dict()
 
-    def set_sectors(self) -> None:
+    def _set_sectors(self) -> None:
         """
-        Sets the sectors in the class
+        Sets the _sectors in the class
         :return: None
         """
-        reader = ReadDB(MongoAPI(db=self.db, collection=self.collection))
-        query = reader.get_asset_data(self.passed_assets, search_by=self.asset_id, fields=['gsector'])
-        self.sectors = query.df['gsector']
-        self.sectors.index = self.sectors.index.astype(str)
-
+        reader = ReadDB(MongoAPI(db=self._db, collection=self._collection))
+        query = reader.get_asset_data(self._passed_assets, search_by=self._asset_id, fields=['gsector'])
+        self._sectors = query.df['gsector']
+        self._sectors.index = self._sectors.index.astype(str)
 
     @property
     def assets(self) -> List[int]:
-        return self.sectors.reset_index().lpermno.astype(int).tolist()
+        return self._sectors.reset_index().lpermno.astype(int).tolist()

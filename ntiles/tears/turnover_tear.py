@@ -11,7 +11,7 @@ from .. import plotter, utils
 
 class TurnoverTear(BaseTear, ABC):
     """
-    tear sheet to make
+    Shows the turnover for a factor
     """
 
     def __init__(self, factor_data: pd.DataFrame, holding_period: Union[int, List[int]]):
@@ -23,8 +23,16 @@ class TurnoverTear(BaseTear, ABC):
         self._summary_stats = None
 
     def compute(self) -> None:
+        """
+        calculates the data for the tear
+        """
         self.calculate_autocorrelation()
         self.calculate_summary_stats()
+
+    def plot(self) -> None:
+        """
+        plots the tear
+        """
         self.plot_turnover()
 
     def calculate_autocorrelation(self) -> None:

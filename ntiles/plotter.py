@@ -7,6 +7,7 @@ from IPython.core.display import display
 
 RETURN_COLOR_MAP = mpl.cm.get_cmap('jet')
 TILTS_COLOR_MAP = mpl.cm.get_cmap('tab20')
+IC_COLOR_MAP = mpl.cm.get_cmap('tab10')
 
 
 def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title):
@@ -18,16 +19,17 @@ def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title):
     :return: matplotlib axis with the return plot on it
     """
 
-    _, ax = plt.subplots(1, 1, figsize=(10, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
 
     cum_ntile_returns.plot(lw=2, ax=ax, cmap=RETURN_COLOR_MAP)
     ax.set(ylabel='Log Cumulative Returns', title=title, xlabel='',
            yscale='symlog')
 
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    #ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
     ax.axhline(1, linestyle='-', color='black', lw=1)
+    fig.autofmt_xdate()
 
     plt.show()
     return ax
@@ -40,7 +42,7 @@ def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int):
     """
     num_ntiles = len(avg_annual_ret)
 
-    _, ax = plt.subplots(1, 1, figsize=(9, 4.5))
+    _, ax = plt.subplots(1, 1, figsize=(9, 4))
     ax.set(ylabel='% Return', title=f'Annual Return, {period} Day Holding period', xlabel='')
 
     colors = [RETURN_COLOR_MAP(i) for i in np.linspace(0, 1, num_ntiles)]
@@ -61,12 +63,13 @@ def plot_inspection_data(table, title, ylabel, decimals=0) -> None:
     :return: None
     """
 
-    _, ax = plt.subplots(1, 1, figsize=(9, 4.5))
+    fig, ax = plt.subplots(1, 1, figsize=(9, 3.5))
     ax.set(title=title, ylabel=ylabel)
     table.plot(lw=2, ax=ax, cmap=RETURN_COLOR_MAP)
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    #ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter(f'%.{decimals}f'))
+    fig.autofmt_xdate()
 
     if isinstance(table, pd.Series):
         ax.get_legend().remove()
@@ -84,12 +87,12 @@ def plot_tilts(frame: pd.DataFrame, ntile: str, group_name: str, ax=None):
     :return: None
     """
     if ax is None:
-        _, ax = plt.subplots(1, 1, figsize=(9, 4.5))
+        fig, ax = plt.subplots(1, 1, figsize=(9, 4.5))
 
     ax.set(title=f'{ntile}, {group_name}'.title(), ylabel='Weight In Ntile')
     frame.plot(lw=2, ax=ax, cmap=TILTS_COLOR_MAP, legend=None)
     ax.axhline(0, linestyle='-', color='black', lw=1)
-    ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    #ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter(f'%.2f'))
     plt.show()
 
@@ -103,17 +106,18 @@ def plot_tilt_hist(series, ntile: str, group_name: str, extra_space=True):
     :return: None
     """
     if extra_space:
-        _, ax = plt.subplots(1, 2, figsize=(12, 4.5))
+        fig, ax = plt.subplots(1, 2, figsize=(12, 4.5))
     else:
         _, ax = plt.subplots(1, 1, figsize=(4.5, 4.5))
 
+    title = 'Weight Relative to Universe' if 'Ntile' in group_name else 'Group Exposure'
     plotter_frame = series.to_frame('weight')
     plotter_frame['colors'] = [TILTS_COLOR_MAP(i) for i in np.linspace(0, 1, len(series))]
     plotter_frame = plotter_frame.sort_values('weight')
 
     ax[0].barh(plotter_frame.index.tolist(), plotter_frame['weight'].tolist(), align='center',
                color=plotter_frame['colors'].tolist())
-    ax[0].set(title=f'{ntile}, {group_name}'.title(), ylabel='Group', xlabel='Weight Relative to Universe')
+    ax[0].set(title=f'{ntile}, {group_name}'.title(), ylabel='Group', xlabel=title)
     ax[0].axvline(0, linestyle='-', color='black', lw=1)
 
     if extra_space:
@@ -132,10 +136,11 @@ def plot_timeseries_ic(ic_series: pd.Series, holding_period: int):
     ic_frame = ic_series.to_frame('IC')
     ic_frame['1 Month Avg IC'] = ic_frame.rolling(21).mean()
 
-    _, ax = plt.subplots(1, 1, figsize=(9, 4))
+    fig, ax = plt.subplots(1, 1, figsize=(9, 4))
     ic_frame.plot(ax=ax, title=f'IC {holding_period} Day Holding Period')
     ax.get_lines()[1].set_linewidth(3)
     ax.axhline(0, linestyle='-', color='black', lw=1)
+    fig.autofmt_xdate()
     plt.show()
 
 
@@ -146,9 +151,20 @@ def plot_auto_corr(ac_series: pd.Series, holding_period: int) -> None:
     :param holding_period: how long the holding period is for the IC
     :return: None
     """
-    _, ax = plt.subplots(1, 1, figsize=(9, 4))
+    fig, ax = plt.subplots(1, 1, figsize=(9, 4))
     ac_series.plot(ax=ax, title=f'Auto Correlation {holding_period} Day Holding Period')
     ax.axhline(ac_series.median(), linestyle=(0, (5, 10)), color='black', lw=1)
+    fig.autofmt_xdate()
+    plt.show()
+
+
+def plot_ic_horizon(horizon_frame: pd.DataFrame):
+    ax_tuple = plt.subplots(2, 2, figsize=(12, 7))[1].flatten()
+    colors = [IC_COLOR_MAP(i) for i in np.linspace(0, 1, 4)]
+
+    for i in range(horizon_frame.shape[1]):
+        plot_me = horizon_frame.iloc[:, i]
+        plot_me.plot(ax=ax_tuple[i], color=colors[i], title=plot_me.name)
     plt.show()
 
 

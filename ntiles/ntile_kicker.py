@@ -1,8 +1,10 @@
 import warnings
+from typing import Dict, Iterable, Optional
 
 import pandas as pd
 
-from ntiles.tears.ic_tear import ICTear
+from ntiles.tears.base_tear import BaseTear
+from ntiles.tears.ic_tear import ICHorizonTear, ICTear
 from ntiles.tears.inspection_tear import InspectionTear
 
 from ntiles.portals.base_portal import BaseGrouperPortalConstant
@@ -12,7 +14,12 @@ from ntiles.tears.turnover_tear import TurnoverTear
 
 
 class Ntile:
-    def __init__(self, pricing_portal: PricingPortal, group_portal: BaseGrouperPortalConstant = None):
+    def __init__(self, pricing_portal: PricingPortal, group_portal: Optional[BaseGrouperPortalConstant] = None):
+        """
+        :param pricing_portal: the pricing portal which holds pricing data for all assets with factor values
+        :param group_portal: group portal which holds grouping information for all assets with factor values
+            if this is None then no group statistics will be calculated
+        """
         self._pricing_portal: PricingPortal = pricing_portal
         self._group_portal = group_portal
 
@@ -28,7 +35,7 @@ class Ntile:
 
     def _input_checks(self, factor_series) -> None:
         """
-        checks the factor series to ensure it meet requirements to runa backtest
+        checks the factor series to ensure it meet requirements to run a tearsheet
 
         Requirements:
             1) series must have MultiIndex with 2 levels
@@ -69,7 +76,7 @@ class Ntile:
         if factor_series.index.duplicated().any():
             raise ValueError('Multiple factor observations on single day for a single asset')
 
-    def _set_ntiles_and_returns(self, factor_data, ntiles):
+    def _set_ntiles_and_returns(self, factor_data: pd.Series, ntiles: int):
         """
         Sets self._formatted_returns and  self._formatted_ntile
         :param factor_data: the factor data
@@ -95,12 +102,12 @@ class Ntile:
         # can see what % of the dataframe is null here
         self._ntile_matrix = ntile_factor.reindex_like(self._formatted_returns)
 
-    def ntile_factor(self, factor: pd.Series, ntiles: pd.Series) -> None:
+    def ntile_factor(self, factor: pd.Series, ntiles: int) -> None:
         """
         Universe relative Quantiles of a factor by day
 
         pd.DataFrame of ntiled factor
-            index: (pd.Period, asset_id)
+            index: (pd.Period, _asset_id)
             Columns: (factor, ntile)
             Values: (factor value, Ntile corresponding to factor value)
 
@@ -164,66 +171,20 @@ class Ntile:
         self._ntile_matrix = None
         self._formatted_returns = None
 
-        # Tear Sheets Below
-        self._inspection_tear = None
-        self._backtest_tear = None
-        self._ic_tear = None
-        self._turnover_tear = None
-
-    def _run(self) -> None:
+    @staticmethod
+    def _run(tears: Dict[str, BaseTear]) -> None:
         """
         Runs all tear sheets that are set in the class
         :return: None
         """
-        tears = [self._inspection_tear, self._backtest_tear, self._ic_tear, self._turnover_tear]
-        for tear in tears:
-            if tear:
-                tear.compute()
-
-    #
-    # Run Decorator
-    #
-    def _start_up(function):
-        """
-        A decorator to run the necessary preparation function to run a tearsheet.
-        Due to the ntiles function storing the tears as attributes we must clear the attributes on every run.
-        If the attributes are not cleared then we would re run every saved tearsheet
-
-        this decorator is a bit jank so could like to eventually change it
-        :param function: the tearsheet function we are running
-        :return: None
-        """
-
-        def start_up_inner(self, factor, ntiles=1, *args, **kwargs):
-            self._prep_for_run(factor, ntiles)
-            function(self, *args, factor=self._factor_data, ntiles=ntiles, **kwargs)
-            self._run()
-
-        return start_up_inner
-
-    def _start_up_no_ntiles(function):
-        """
-        same as _start_up but is used for functions that done require the ntiles parameter
-        probably can just wrap _start_up somehow instead of writing basically the same code over
-
-        :param function: the tearsheet function we are running
-        :return: None
-        """
-
-        def start_up_inner(self, factor, *args, **kwargs):
-            self._prep_for_run(factor, 1)
-            function(self, *args, factor=self._factor_data, **kwargs)
-            self._run()
-
-        return start_up_inner
+        for tear in tears.values():
+            tear.compute_plot()
 
     #
     # Tear Sheets Below
     #
-    @_start_up
-    def full_tear(self, factor: pd.Series, ntiles: int, holding_period: int,
-                  long_short: bool = True, market_neutral=True, show_plots=True, show_uni=False,
-                  show_ntile_tilts=False) -> None:
+    def full_tear(self, factor: pd.Series, ntiles: int, holding_period: int, long_short: bool = True,
+                  market_neutral=True, show_uni=False, show_ntile_tilts=False) -> Dict[str, BaseTear]:
         """
         runs all tear sheets
         :param factor: @ntile_backtest_tear | @ntile_inspection_tear
@@ -231,24 +192,27 @@ class Ntile:
         :param holding_period: @ntile_backtest_tear
         :param long_short: @ntile_backtest_tear
         :param market_neutral: @ntile_backtest_tear
-        :param show_plots: @ntile_backtest_tear
         :param show_uni: @ntile_backtest_tear
         :param show_ntile_tilts: @ntile_backtest_tear
         :return: None
         """
-        self._inspection_tear = InspectionTear(factor_data=self._factor_data)
-        self._backtest_tear = TiltsBacktestTear(ntile_matrix=self._ntile_matrix, daily_returns=self._formatted_returns,
-                                                ntiles=ntiles, holding_period=holding_period,
-                                                long_short=long_short, market_neutral=market_neutral,
-                                                show_plots=show_plots, show_uni=show_uni, factor_data=self._factor_data,
-                                                group_portal=self._group_portal, show_ntile_tilts=show_ntile_tilts)
-        self._ic_tear = ICTear(self._factor_data, self._formatted_returns, holding_period)
-        self._turnover_tear = TurnoverTear(self._factor_data, holding_period)
+        self._prep_for_run(factor, ntiles)
+        tears = {'inspection_tear': InspectionTear(factor_data=self._factor_data),
+                 'backtest_tear': TiltsBacktestTear(ntile_matrix=self._ntile_matrix,
+                                                    daily_returns=self._formatted_returns, ntiles=ntiles,
+                                                    holding_period=holding_period, long_short=long_short,
+                                                    market_neutral=market_neutral,
+                                                    show_uni=show_uni, factor_data=self._factor_data,
+                                                    group_portal=self._group_portal,
+                                                    show_ntile_tilts=show_ntile_tilts),
+                 'ic_tear': ICTear(factor_data=self._factor_data, daily_returns=self._formatted_returns,
+                                   holding_period=holding_period),
+                 'turnover_tear': TurnoverTear(factor_data=self._factor_data, holding_period=holding_period)}
+        self._run(tears)
+        return tears
 
-    @_start_up
-    def ntile_backtest_tear(self, factor: pd.Series, ntiles: int, holding_period: int,
-                            long_short: bool = True, market_neutral=True, show_plots=True, show_uni=False,
-                            show_ntile_tilts=False) -> None:
+    def ntile_backtest_tear(self, factor: pd.Series, ntiles: int, holding_period: int, long_short: bool = True,
+                            market_neutral=True, show_uni=False, show_ntile_tilts=False) -> Dict[str, BaseTear]:
         """
         Creates a fan chart of cumulative returns for the given factor values.
         The factor values are ntile'd into ntiles number of bins
@@ -261,90 +225,82 @@ class Ntile:
         All positions are equally weighted.
 
         :param factor: The factor values being tested.
-            index: (pd.Period, asset_id)
+            index: (pd.Period, _asset_id)
             values: (factor_value)
         :param holding_period: How long we want to hold positions for, represents days
         :param ntiles: amount of bins we are testing (1 is high factor value n is low value)
         :param long_short: show we compute the spread between ntiles: (1 - n)
         :param market_neutral: subtract out the universe returns from the ntile returns?
-        :param show_plots: should stats and plots be shown?
         :return: plots showing the return profile of the factor
         :param show_uni: Should universe return be shown in the spread plot?
-        :param show_ntile_weights: should we show each ntiles tilts?
+        :param show_ntile_tilts: should we show each ntiles tilts?
         """
-        self._backtest_tear = TiltsBacktestTear(ntile_matrix=self._ntile_matrix, daily_returns=self._formatted_returns,
-                                                ntiles=ntiles, holding_period=holding_period,
-                                                long_short=long_short, market_neutral=market_neutral,
-                                                show_plots=show_plots, show_uni=show_uni, factor_data=self._factor_data,
-                                                group_portal=self._group_portal, show_ntile_tilts=show_ntile_tilts)
+        self._prep_for_run(factor, ntiles)
+        tears = {'backtest_tear':
+                     TiltsBacktestTear(ntile_matrix=self._ntile_matrix, daily_returns=self._formatted_returns,
+                                       ntiles=ntiles, holding_period=holding_period, long_short=long_short,
+                                       market_neutral=market_neutral, show_uni=show_uni, factor_data=self._factor_data,
+                                       group_portal=self._group_portal, show_ntile_tilts=show_ntile_tilts)
+                 }
+        self._run(tears)
+        return tears
 
-    @_start_up
-    def ntile_inspection_tear(self, factor: pd.Series, ntiles: int) -> None:
+    def ntile_inspection_tear(self, factor: pd.Series, ntiles: int) -> Dict[str, BaseTear]:
         """
         runs InspectionTear
         :param factor: the factor data to inspect
         :param ntiles: the number of ntiles
         :return: None
         """
-        self._inspection_tear = InspectionTear(factor)
+        self._prep_for_run(factor, ntiles)
+        tears = {'inspection_tear': InspectionTear(factor_data=self._factor_data)}
+        self._run(tears)
+        return tears
 
-    @_start_up_no_ntiles
-    def ntile_ic_tear(self, factor: pd.Series, holding_period: int):
+    def ntile_ic_tear(self, factor: pd.Series, holding_period: int) -> Dict[str, BaseTear]:
         """
         runs ICTear
         :param factor: The factor values being tested.
-            index: (pd.Period, asset_id)
+            index: (pd.Period, _asset_id)
             values: (factor_value)
         :param holding_period: How long we want to hold positions for, represents days
         :return: None
         """
-        self._ic_tear = ICTear(self._factor_data, self._formatted_returns, holding_period)
+        self._prep_for_run(factor, 1)
+        tears = {'ic_tear': ICTear(factor_data=self._factor_data, daily_returns=self._formatted_returns,
+                                   holding_period=holding_period)}
+        self._run(tears)
+        return tears
 
-    @_start_up_no_ntiles
-    def ntile_turnover_tear(self, factor: pd.Series, holding_period: int):
+    def ntile_turnover_tear(self, factor: pd.Series, holding_period: int) -> Dict[str, BaseTear]:
         """
         runs TurnoverTear
         :param factor: The factor values being tested.
-           index: (pd.Period, asset_id)
+           index: (pd.Period, _asset_id)
            values: (factor_value)
         :param holding_period: How long we want to hold positions for, represents days
         :return: None
         """
-        self._turnover_tear = TurnoverTear(self._factor_data, holding_period)
+        self._prep_for_run(factor, 1)
+        tears = {'turnover_tear': TurnoverTear(factor_data=self._factor_data, holding_period=holding_period)}
+        self._run(tears)
+        return tears
 
-    def ntile_ic_frontier(self, factor_data: pd.DataFrame, start: int, stop: int, skip: int):
+    def ntile_ic_frontier(self, factor: pd.Series, intervals: Iterable[int], show_individual: bool = False) -> \
+            Dict[str, BaseTear]:
         """
         runs the ICFrontier tear
+        Shows the curve of the information coefficient over various holding periods
+
         :param factor: The factor values being tested.
-           index: (pd.Period, asset_id)
+           index: (pd.Period, _asset_id)
            values: (factor_value)
-        :param start: How long we want to hold positions for, represents days
+        :param intervals: an iterable that contains the holding periods we would like to make the IC frontier for
+        :param show_individual: should each individual IC time series be show for every interval
         """
-        pass
-
-    _start_up = staticmethod(_start_up)
-    _start_up_no_ntiles = staticmethod(_start_up_no_ntiles)
-
-    #
-    # get data functions
-    #
-    def cum_ret_to_clipboard(self) -> None:
-        """
-        Pastes the cumulative returns to the clipboard.
-        Useful for pasting into excel
-        :return: None
-        """
-        if not self._backtest_tear:
-            raise ValueError('Have not yet ran a backtest!')
-
-        self._backtest_tear.cum_ret_to_clipboard()
-
-    def ic_to_clipboard(self) -> None:
-        """
-        Writes ic to the clipboard.
-        :return: None
-        """
-        if not self._ic_tear:
-            raise ValueError('Have not yet ran a IC tear yet!')
-
-        self._ic_tear.cum_ret_to_clipboard()
+        self._prep_for_run(factor, 1)
+        tears = {
+            'ic_horizon_tear': ICHorizonTear(factor_data=self._factor_data, daily_returns=self._formatted_returns,
+                                             intervals=intervals, show_individual=show_individual)}
+        self._run(tears)
+        return tears
