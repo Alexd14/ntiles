@@ -32,8 +32,8 @@ tile.full_tear(factor=my_factor, ntiles=5, holding_period=20)
 ```
 
 ### Example Tearsheet
-![img.png](test/img.png)
-![img_1.png](test/img_1.png)
-![img_2.png](test/img_2.png)
-![img_3.png](test/img_3.png)
-![img_4.png](test/img_4.png)
+![](ntiles/examples/inspection_1.png)
+![](ntiles/examples/inspection_2.png)
+![](ntiles/examples/return_1.png)
+![](ntiles/examples/return_2.png)
+![](ntiles/examples/ic_ac.png)
