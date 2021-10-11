@@ -53,7 +53,7 @@ def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int):
     return ax
 
 
-def plot_inspection_data(table: pd.DataFrame, title: str, ylabel: str, decimals: float = 0.0) -> None:
+def plot_inspection_data(table: pd.DataFrame, title: str, ylabel: str, decimals: int = 0) -> None:
     """
     plots the inspection data for inspection tear sheets
     :param table: the table to plot
