@@ -148,7 +148,6 @@ class BacktestTear(BaseTear, ABC):
         :param weighted_asset_returns: the weighted returns of each asset
         :return: None
         """
-        pass
         self.daily_weights[f'Ntile: {ntile}'] = \
             pd.DataFrame(daily_weights, index=self.daily_returns.index[self.holding_period - 1:],
                          columns=self.daily_returns.columns)
@@ -185,7 +184,7 @@ class BacktestTear(BaseTear, ABC):
             # spread plotting
             stats.generate_return_stats(long_short_frame, False)
             plotter.ntile_return_plot(cum_ret[spread_cols],
-                                      f'Spread Returns {self.holding_period} Day Holding Period')
+                                      f'Long Short Returns {self.holding_period} Day Holding Period')
 
     #
     # Data methods

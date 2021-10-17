@@ -1,7 +1,7 @@
 from abc import ABC
+from typing import List, Optional
 
 import pandas as pd
-from typing import Optional, List
 from equity_db import MongoAPI, ReadDB
 
 from ntiles.portals.base_portal import BaseDeltaPortal
@@ -12,9 +12,9 @@ class PricingPortal(BaseDeltaPortal, ABC):
     Object to query and cache pricing data
     """
 
-    def __init__(self, assets: List[str], start: pd.Timestamp, end: pd.Timestamp, pricing_field: str = 'prccd',
-                 adjustor_field: str = 'ajexdi', db: str = 'equity', collection: str = 'crsp',
-                 trading_calender='NYSE'):
+    def __init__(self, assets: List[str], start: str, end: str, search_by: str = 'lpermno',
+                 pricing_field: str = 'prccd', adjustor_field: str = 'ajexdi', db: str = 'equity',
+                 collection: str = 'crsp', trading_calender='NYSE'):
         """
         :param assets: The assets to get data for
         :param start: start of period to query
@@ -25,13 +25,13 @@ class PricingPortal(BaseDeltaPortal, ABC):
         :param collection: the _collection to query
         :param trading_calender: the trading calendar to use to verify dates
         """
-        super().__init__(assets, start.to_period('D'), end.to_period('D'))
+        super().__init__(assets, pd.Period(start, 'D'), pd.Period(end, 'D'))
 
         self._pricing_field = pricing_field
 
         self._adjusted_pricing: Optional[pd.DataFrame] = None
         self._period_delta: Optional[pd.DataFrame] = None
-        self._query_adjusted_pricing(db, collection, assets, start, end, pricing_field, adjustor_field,
+        self._query_adjusted_pricing(db, collection, assets, start, end, search_by, pricing_field, adjustor_field,
                                      trading_calender)
 
     @property
@@ -74,7 +74,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         """
         return self._adjusted_pricing.index.get_level_values('date').unique().tolist()
 
-    def _query_adjusted_pricing(self, db, collection, assets, start, end, pricing_field, adjustor_field,
+    def _query_adjusted_pricing(self, db, collection, assets, start, end, search_by, pricing_field, adjustor_field,
                                 trading_calender) -> None:
         """
         Makes query the pricing data
@@ -85,7 +85,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         """
         # querying pricing
         reader = ReadDB(MongoAPI(db, collection))
-        query_df = reader.get_asset_data(assets, search_by='lpermno', start=start, end=end,
+        query_df = reader.get_asset_data(assets, search_by=search_by, start=pd.Timestamp(start), end=pd.Timestamp(end),
                                          fields=[pricing_field, adjustor_field])
         pricing_df = query_df.set_calendar(trading_calender).df.reset_index()
 
@@ -108,7 +108,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         prints a summary of query and tells you what id's were not able to be found in the query
         :return: None
         """
-        query_assets = self._adjusted_pricing.index.get_level_values('date').astype(str)
+        query_assets = self._adjusted_pricing.index.get_level_values(1).astype(str).unique().tolist()
         not_found_assets = set(assets) - set(query_assets)
         if len(not_found_assets) == 0:
             print('All assets retrieved in query!')

@@ -152,7 +152,7 @@ def plot_auto_corr(ac_series: pd.Series, holding_period: int) -> None:
     :return: None
     """
     fig, ax = plt.subplots(1, 1, figsize=(9, 4))
-    ac_series.plot(ax=ax, title=f'Auto Correlation {holding_period} Day Holding Period')
+    ac_series.plot(ax=ax, title=f'Autocorrelation {holding_period} Day Holding Period')
     ax.axhline(ac_series.median(), linestyle=(0, (5, 10)), color='black', lw=1)
     fig.autofmt_xdate()
     plt.show()

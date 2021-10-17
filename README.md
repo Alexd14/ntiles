@@ -1,15 +1,9 @@
 ## Ntiles
-Ntiles is a fast and lightweight quantile backtester which trys to measure the monotonic relationship between an equity 
-factor and future equity returns. Ntiles has a simplistic but powerful API which allows users to load pricing data and test factors 
-in less than 5 lines of code. The package utilizes [equity-db](https://github.com/Alexd14/equity-db) to query and 
-cache pricing data behind the scenes.
+Ntiles is a fast and lightweight quantile backtester. 
+Ntiles has a simplistic but powerful API which allows users to load pricing data and test the predictive ability of factors in less than 5 lines of code. 
+The package utilizes [equity-db](https://github.com/Alexd14/equity-db) to query and cache pricing data behind the scenes.
 
 ### Why Ntiles?
-For the past few years I have been a user of alphalens it's a great package however, alphalens has various 
-shortcommings and room for improvement. Ntiles addresses these shortcomings, adds useful new functionality, 
-improves code efficiency, and generates more accurate backtests. 
-
-**A Few Improvements:**
 1) Speed! Ntiles is over 6 times faster than alphalens when generating tearsheets.
 2) Accurate cumulative returns! Each day Ntiles will compute the daily returns of each quantile using daily asset
    returns and weights.
