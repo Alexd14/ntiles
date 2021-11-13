@@ -5,7 +5,7 @@ from abc import ABC
 import pandas as pd
 import numpy as np
 
-from base_tear import BaseTear
+from .base_tear import BaseTear
 from .. import plotter, utils
 
 

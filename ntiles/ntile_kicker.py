@@ -3,14 +3,13 @@ from typing import Dict, Iterable, Optional
 
 import pandas as pd
 
-from ntiles.tears.base_tear import BaseTear
-from ntiles.tears.ic_tear import ICHorizonTear, ICTear
-from ntiles.tears.inspection_tear import InspectionTear
-
-from ntiles.portals.base_portal import BaseGrouperPortalConstant
-from ntiles.portals.pricing_portal import PricingPortal
-from ntiles.tears.tilts_backtest_tear import TiltsBacktestTear
-from ntiles.tears.turnover_tear import TurnoverTear
+from .portals.base_portal import BaseGrouperPortalConstant
+from .portals.pricing_portal import PricingPortal
+from .tears.base_tear import BaseTear
+from .tears.ic_tear import ICHorizonTear, ICTear
+from .tears.inspection_tear import InspectionTear
+from .tears.tilts_backtest_tear import TiltsBacktestTear
+from .tears.turnover_tear import TurnoverTear
 
 
 class Ntile:
@@ -47,7 +46,7 @@ class Ntile:
             raise ValueError('Factor input must have MultiIndex of period, id')
 
         # ensure the index level zero is date
-        if not isinstance(factor_series.index.get_level_values(0), pd.PeriodIndex):  # could also be pd.Period idk
+        if not isinstance(factor_series.index.get_level_values(0), pd.PeriodIndex):
             raise ValueError('Factor input must have MultiIndex with the first level being a period '
                              f'current factor dtype is {type(factor_series.index.get_level_values(0))}')
 
@@ -93,8 +92,13 @@ class Ntile:
         self._formatted_returns = daily_returns[(daily_returns.index >= factor_date.min()) &
                                                 (daily_returns.index <= factor_date.max())]
 
-        # can see what % of the dataframe is null here
+        # reindexing the ntiles data so that you have pricing and ntiles matching up
         self._ntile_matrix = ntile_factor.reindex_like(self._formatted_returns)
+
+        # setting _factor_data to a reindexed version of _factor_data so we can see what data we have pricing for
+        # self._factor_data['has_returns'] = self._ntile_matrix.stack() # tricky to do without a join
+
+        # can see what % of the dataframe is null here
 
     def ntile_factor(self, factor: pd.Series, ntiles: int) -> None:
         """
@@ -139,7 +143,12 @@ class Ntile:
         :param ntiles: num ntiles for sheet
         :return: None
         """
-        factor_series = factor.copy()
+        # checking to see if we have series or data frame
+        if isinstance(factor, pd.DataFrame):
+            factor_series = factor.iloc[:, 0]
+        else:
+            factor_series = factor.copy()
+
         self._input_checks(factor_series)
 
         factor_series.index.names = ['date', 'id']

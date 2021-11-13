@@ -26,7 +26,7 @@ def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title: str):
            yscale='symlog')
 
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
-    # ax.xaxis.set_major_formatter(mpl.dates.DateFormatter('%m-%Y'))
+    ax.set_yscale('log', basey=2)
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
     ax.axhline(1, linestyle='-', color='black', lw=1)
     fig.autofmt_xdate()
@@ -175,7 +175,7 @@ def render_heat_table(frame: pd.DataFrame) -> None:
     :return: None
     """
     cm = mpl.cm.get_cmap('RdYlGn')
-    styled = frame.style.background_gradient(cmap=cm, axis=0).format(precision=2).set_properties(
+    styled = frame.style.background_gradient(cmap=cm, axis=0).format('{:.2f}').set_properties(
         **{'text-align': 'center'})
     render_table(styled)
 
