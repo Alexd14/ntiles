@@ -95,9 +95,6 @@ class Ntile:
         # reindexing the ntiles data so that you have pricing and ntiles matching up
         self._ntile_matrix = ntile_factor.reindex_like(self._formatted_returns)
 
-        # setting _factor_data to a reindexed version of _factor_data so we can see what data we have pricing for
-        # self._factor_data['has_returns'] = self._ntile_matrix.stack() # tricky to do without a join
-
         # can see what % of the dataframe is null here
 
     def ntile_factor(self, factor: pd.Series, ntiles: int) -> None:
@@ -145,6 +142,8 @@ class Ntile:
         """
         # checking to see if we have series or data frame
         if isinstance(factor, pd.DataFrame):
+            if factor.shape[1] > 1: # there is a df passed with multible columns
+                print(f'Running tests on {factor.columns[0]}')
             factor_series = factor.iloc[:, 0]
         else:
             factor_series = factor.copy()
