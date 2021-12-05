@@ -9,6 +9,10 @@ RETURN_COLOR_MAP = mpl.cm.get_cmap('jet')
 TILTS_COLOR_MAP = mpl.cm.get_cmap('tab20')
 IC_COLOR_MAP = mpl.cm.get_cmap('tab10')
 
+LARGE_FIGSIZE = 20, 10
+MEDIUM_FIGSIZE = (15, 8)
+SMALL_FIGSIZE = (12, 7)
+
 
 def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title: str):
     """
@@ -19,7 +23,7 @@ def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title: str):
     :return: matplotlib axis with the return plot on it
     """
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    fig, ax = plt.subplots(1, 1, figsize=LARGE_FIGSIZE)
 
     cum_ntile_returns.plot(lw=2, ax=ax, cmap=RETURN_COLOR_MAP)
     ax.set(ylabel='Log Cumulative Returns', title=title, xlabel='',
@@ -42,7 +46,7 @@ def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int):
     """
     num_ntiles = len(avg_annual_ret)
 
-    _, ax = plt.subplots(1, 1, figsize=(9, 4))
+    _, ax = plt.subplots(1, 1, figsize=SMALL_FIGSIZE)
     ax.set(ylabel='% Return', title=f'Annual Return, {period} Day Holding period', xlabel='')
 
     colors = [RETURN_COLOR_MAP(i) for i in np.linspace(0, 1, num_ntiles)]
@@ -63,7 +67,7 @@ def plot_inspection_data(table: pd.DataFrame, title: str, ylabel: str, decimals:
     :return: None
     """
 
-    fig, ax = plt.subplots(1, 1, figsize=(9, 3.5))
+    fig, ax = plt.subplots(1, 1, figsize=SMALL_FIGSIZE)
     ax.set(title=title, ylabel=ylabel)
     table.plot(lw=2, ax=ax, cmap=RETURN_COLOR_MAP)
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
@@ -87,7 +91,7 @@ def plot_tilts(frame: pd.DataFrame, ntile: str, group_name: str, ax=None):
     :return: None
     """
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(9, 4.5))
+        fig, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
 
     ax.set(title=f'{ntile}, {group_name}'.title(), ylabel='Weight In Ntile')
     frame.plot(lw=2, ax=ax, cmap=TILTS_COLOR_MAP, legend=None)
@@ -106,7 +110,7 @@ def plot_tilt_hist(series, ntile: str, group_name: str, extra_space: bool = True
     :return: None
     """
     if extra_space:
-        fig, ax = plt.subplots(1, 2, figsize=(12, 4.5))
+        fig, ax = plt.subplots(1, 2, figsize=LARGE_FIGSIZE)
     else:
         _, ax = plt.subplots(1, 1, figsize=(4.5, 4.5))
 
@@ -136,7 +140,7 @@ def plot_timeseries_ic(ic_series: pd.Series, holding_period: int):
     ic_frame = ic_series.to_frame('IC')
     ic_frame['1 Month Avg IC'] = ic_frame.rolling(21).mean()
 
-    fig, ax = plt.subplots(1, 1, figsize=(9, 4))
+    fig, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
     ic_frame.plot(ax=ax, title=f'IC {holding_period} Day Holding Period')
     ax.get_lines()[1].set_linewidth(3)
     ax.axhline(0, linestyle='-', color='black', lw=1)
@@ -151,7 +155,7 @@ def plot_auto_corr(ac_series: pd.Series, holding_period: int) -> None:
     :param holding_period: how long the holding period is for the IC
     :return: None
     """
-    fig, ax = plt.subplots(1, 1, figsize=(9, 4))
+    fig, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
     ac_series.plot(ax=ax, title=f'Autocorrelation {holding_period} Day Holding Period')
     ax.axhline(ac_series.median(), linestyle=(0, (5, 10)), color='black', lw=1)
     fig.autofmt_xdate()
@@ -159,7 +163,7 @@ def plot_auto_corr(ac_series: pd.Series, holding_period: int) -> None:
 
 
 def plot_ic_horizon(horizon_frame: pd.DataFrame):
-    ax_tuple = plt.subplots(2, 2, figsize=(12, 7))[1].flatten()
+    ax_tuple = plt.subplots(2, 2, figsize=LARGE_FIGSIZE)[1].flatten()
     colors = [IC_COLOR_MAP(i) for i in np.linspace(0, 1, 4)]
 
     for i in range(horizon_frame.shape[1]):
