@@ -1,16 +1,6 @@
-## Ntiles
-Ntiles is a fast and lightweight quantile backtester. 
-Ntiles has a simplistic but powerful API which allows users to load pricing data and test the predictive ability of factors in less than 5 lines of code. 
-The package utilizes [equity-db](https://github.com/Alexd14/equity-db) to query and cache pricing data behind the scenes.
-
-### Why Ntiles?
-1) Speed! Ntiles is over 6 times faster than alphalens when generating tearsheets.
-2) Accurate cumulative returns! Each day Ntiles will compute the daily returns of each quantile using daily asset
-   returns and weights.
-    1) This is intuitively simple but something alphalens does not do for holding period's greater than 1 day.
-3) Users don't need to worry about reading and formatting pricing data. Ntiles has *Portals* which query and cache 
-pricing data using [equity-db](https://github.com/Alexd14/equity-db).
-4) No more pesky time zone errors! Ntiles uses Pandas Periods.
+```python
+pip install ntiles
+```
 
 ### API
 ```python
