@@ -41,7 +41,7 @@ class TurnoverTear(BaseTear, ABC):
 
         calculates the autocorrelation of n and n - holding period
         """
-        factor_unstacked = self._factor_data.unstack()
+        factor_unstacked = self._factor_data['factor'].unstack()
         auto_corr_arr = utils.correlation_2d(factor_unstacked.to_numpy(),
                                              factor_unstacked.shift(self._holding_period).to_numpy())
 

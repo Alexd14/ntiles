@@ -96,6 +96,21 @@ class Ntile:
         self._ntile_matrix = ntile_factor.reindex_like(self._formatted_returns)
 
         # can see what % of the dataframe is null here
+        self._make_null_summary(ntile_factor)
+
+    def _make_null_summary(self, ntile_factor):
+        """
+        making a summary of how much factor data we matched to pricing data
+        :param ntile_factor: the raw unstacked ntile from factor data
+        """
+        binary_if_factor_data = ntile_factor.notnull().astype('int')
+        binary_if_mapped_factor_data = self._ntile_matrix.notnull().astype('int')
+
+        factor_for = binary_if_factor_data.sum().sum()
+        returns_and_factor_for = (binary_if_factor_data * binary_if_mapped_factor_data).sum().sum()
+
+        print(f'Mapped {round(returns_and_factor_for / factor_for, 4) * 100}% of factor values to returns')
+
 
     def ntile_factor(self, factor: pd.Series, ntiles: int) -> None:
         """
@@ -142,7 +157,7 @@ class Ntile:
         """
         # checking to see if we have series or data frame
         if isinstance(factor, pd.DataFrame):
-            if factor.shape[1] > 1: # there is a df passed with multible columns
+            if factor.shape[1] > 1:  # there is a df passed with multible columns
                 print(f'Running tests on {factor.columns[0]}')
             factor_series = factor.iloc[:, 0]
         else:

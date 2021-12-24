@@ -30,7 +30,7 @@ def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title: str):
            yscale='symlog')
 
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
-    ax.set_yscale('log', basey=2)
+    ax.set_yscale('log', base=2)
     ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
     ax.axhline(1, linestyle='-', color='black', lw=1)
     fig.autofmt_xdate()
