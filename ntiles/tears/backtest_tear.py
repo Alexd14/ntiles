@@ -99,7 +99,8 @@ class BacktestTear(BaseTear, ABC):
             out = pd.DataFrame(out, index=self.ntile_matrix.index[self.holding_period - 2:])
         else:
             raise ValueError('One day holding period is currently not supported!')
-            # out = pd.DataFrame(out, index=ntile_matrix.index)
+            #print()
+            #out = pd.DataFrame(out, index=self.ntile_matrix.index)
 
         if self.market_neutral:
             # subtracting out universe returns

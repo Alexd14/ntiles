@@ -134,3 +134,28 @@ def remove_cat_index(frame: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, 
         frame.index = frame.index.astype(str)
 
     return frame
+
+
+def convert_date_to_period(frame: Union[pd.DataFrame, pd.Series], freq: str = 'D', **kwargs) -> Union[pd.DataFrame, pd.Series]:
+    """
+    converts the date column to a period if the date column is of type timestamp
+    if the 'date' column is a period then nothing will be changed
+    date can be in the index or columns
+
+    :param frame: the frame containing the date column
+    :param freq: the freq for the period
+    :return: thr same frame that was passed but 'date' is a partiod.
+    """
+
+    if 'date' in frame.columns:
+        frame['date'] = frame['date'].dt.to_period(freq)
+        return frame
+
+    if 'date' in frame.index.names:
+        temp_index_df = frame.index.to_frame()
+        temp_index_df['date'] = temp_index_df['date'].dt.to_period(freq)
+        frame.index = pd.MultiIndex.from_frame(temp_index_df)
+        return frame
+
+    raise ValueError('Date not found in data frame')
+

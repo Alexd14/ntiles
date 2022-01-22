@@ -16,10 +16,11 @@ setup(
     install_requires=[
         'numba',
         'pandas',
-        'equity-db',
         'numpy',
         'matplotlib',
-        'empyrical'
+        'empyrical',
+        'factor_toolbox',
+        # 'equity-db'
         ],
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
