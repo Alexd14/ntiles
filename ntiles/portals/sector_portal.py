@@ -1,28 +1,24 @@
 from abc import ABC
-from typing import List
+from typing import Iterable, List, Union
 
 import pandas as pd
-from equity_db import MongoAPI, ReadDB
 
-from ntiles.portals.base_portal import BaseGrouperPortalConstant
+from toolbox import QueryConstructor
+from .base_portal import BaseGrouperPortalConstant
 
 
 class SectorPortal(BaseGrouperPortalConstant, ABC):
-    def __init__(self, passed_assets: List[str], asset_id: str = 'lpermno', db: str = 'equity',
-                 collection: str = 'crsp'):
+    def __init__(self, assets: Union[Iterable, str], search_by: str = 'permno', field='gsector'):
         """
-        :param asset_id: the assets to get the sector data for
-        :param asset_id: what is the id of the asset, must be recognised by equity_db
-        :param db: name of the db
-        :param collection: name of the collection
+        :param assets: the assets or universe to get the sector data for
+        :param search_by: what is the id of the asset
+        :param field: name of field we want to get
         """
-        super().__init__(passed_assets, 'GIC Sector')
-        self._passed_assets = passed_assets
-        self._asset_id = asset_id
-        self._db = db
-        self._collection = collection
+        super().__init__(assets, 'GIC Sector')
+        self._search_by = search_by
+        self._field = field
 
-        self._sectors = None
+        self._group = None
         self._set_sectors()
 
     @property
@@ -31,11 +27,7 @@ class SectorPortal(BaseGrouperPortalConstant, ABC):
         gets the gic _sectors for the give assets
         :return: DataFrame of GIC _sectors for the given assets
         """
-        if self._sectors is not None:
-            return self._sectors
-
-        self._set_sectors()
-        return self._sectors
+        return self._group
 
     @property
     def group_mapping(self):
@@ -49,11 +41,10 @@ class SectorPortal(BaseGrouperPortalConstant, ABC):
         Sets the _sectors in the class
         :return: None
         """
-        reader = ReadDB(MongoAPI(db=self._db, collection=self._collection))
-        query = reader.get_asset_data(self._passed_assets, search_by=self._asset_id, fields=['gsector'])
-        self._sectors = query.df['gsector']
-        self._sectors.index = self._sectors.index.astype(str)
+
+        self._group = QueryConstructor().query_no_date_table(table='ccm.crsp_cstat_link', fields=[self._field], assets=self._assets,
+                                               search_by=self._search_by).fillna(-1)
 
     @property
     def assets(self) -> List[int]:
-        return self._sectors.reset_index().lpermno.astype(int).tolist()
+        return self._group.index.tolist()
