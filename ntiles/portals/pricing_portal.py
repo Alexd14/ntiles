@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Iterable, List, Union
+from typing import Iterable, Union
 
 import pandas as pd
 import numpy as np
@@ -13,12 +13,13 @@ class PricingPortal(BaseDeltaPortal, ABC):
     pulls pricing from database
     """
 
-    def __init__(self, assets: Union[Iterable, str], search_by: str, start: str, end: str,
-                 field: str = 'prc', schema: str = 'CRSP'):
-        super().__init__(assets, pd.Period(start), pd.Period(end))
+    def __init__(self, assets: Union[Iterable, str], search_by: str, start_date: str, end_date: str,
+                 field: str = 'prc', schema: str = 'CRSP', con=None):
+        super().__init__(assets, pd.Period(start_date), pd.Period(end_date))
         self._search_by = search_by
         self._field = field
         self._schema = schema
+        self._con = con
 
         self._pricing = None
         self._get_pricing()
@@ -40,7 +41,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
         return self._pricing.index.drop_duplicates().to_list()
 
     def _get_pricing(self):
-        df = (QueryConstructor()
+        df = (QueryConstructor(sql_con=self._con)
               .query_timeseries_table(self._schema + '.security_daily', assets=self._assets,
                                       start_date=str(self._start), end_date=str(self._end), search_by=self._search_by,
                                       fields=[self._field]).distinct()

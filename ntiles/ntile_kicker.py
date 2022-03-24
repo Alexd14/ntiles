@@ -2,6 +2,7 @@ import warnings
 from typing import Dict, Iterable, Optional
 
 import pandas as pd
+import duckdb
 
 from .portals.base_portal import BaseGrouperPortalConstant
 from .portals.pricing_portal import PricingPortal
@@ -76,8 +77,11 @@ class Ntile:
         :param ntiles: amount of ntiles
         :return: None
         """
-        self.ntile_factor(factor_data, ntiles)
+        self._ntile_factor_sql(factor_data, ntiles)
         self._align_ntiles_pricing()
+
+        # can see what % of the dataframe is null here
+        self._make_null_summary(factor_data)
 
     def _align_ntiles_pricing(self) -> None:
         """
@@ -95,26 +99,49 @@ class Ntile:
         # reindexing the ntiles data so that you have pricing and ntiles matching up
         self._ntile_matrix = ntile_factor.reindex_like(self._formatted_returns)
 
-        # can see what % of the dataframe is null here
-        self._make_null_summary(ntile_factor)
-
-    def _make_null_summary(self, ntile_factor):
+    def _make_null_summary(self, raw_factor_data) -> None:
         """
         making a summary of how much factor data we matched to pricing data
-        :param ntile_factor: the raw unstacked ntile from factor data
+        :param raw_factor_data: the raw unstacked factor data
         """
-        binary_if_factor_data = ntile_factor.notnull().astype('int')
-        binary_if_mapped_factor_data = self._ntile_matrix.notnull().astype('int')
+        length_og_factor_data = len(raw_factor_data)
+        # seeing what % of factor data is missing
+        num_na_data_points = raw_factor_data.isnull().sum()
+        pct_na_data_points = num_na_data_points / length_og_factor_data
 
-        factor_for = binary_if_factor_data.sum().sum()
-        returns_and_factor_for = (binary_if_factor_data * binary_if_mapped_factor_data).sum().sum()
+        # amount of data droped because of non aligned factor and returns dates:
+        # above should be non null length of ntiles before reindexing
+        # non null length of ntiles after indexing
+        number_of_finite_ntiles = length_og_factor_data - num_na_data_points
+        binary_if_ntile_data = self._ntile_matrix.notnull()
+        number_of_finite_ntiles_no_overlap_returns = number_of_finite_ntiles - binary_if_ntile_data.sum().sum()
+        pct_missing_ntile_no_overlap = number_of_finite_ntiles_no_overlap_returns / number_of_finite_ntiles
 
-        print(f'Mapped {round(returns_and_factor_for / factor_for, 4) * 100}% of factor values to returns')
+        # amount of data we dont have returns for given we have overlapping pricing and factor
+        # should ffill ntile by holdign period since we need return data holding_period days out
+        binary_if_return_data = self._formatted_returns.notnull()
+        # should forward fill by holding period to make sure we have pricing for when we will be holding the stock
+        missing_from_no_returns_given_overlap = (number_of_finite_ntiles
+                                                 - (binary_if_ntile_data * binary_if_return_data).sum().sum())
+        pct_missing_data_no_returns_given_overlap = missing_from_no_returns_given_overlap / number_of_finite_ntiles
 
+        # total number of unusable factor data points due to null or no maped returns
+        num_bad = (num_na_data_points
+                   + number_of_finite_ntiles_no_overlap_returns
+                   + missing_from_no_returns_given_overlap
+                   )
 
-    def ntile_factor(self, factor: pd.Series, ntiles: int) -> None:
+        pct_bad = num_bad / length_og_factor_data
+
+        print(f"Unusable Factor Data:           {(round(pct_bad, 4)) * 100}%")
+        print(f"NA Factor Values:               {(round(pct_na_data_points, 4)) * 100}%")
+        print(f"No Overlapping Returns:         {(round(pct_missing_ntile_no_overlap, 4)) * 100}%")
+        print(f"Missing Returns Given Overlap:  {(round(pct_missing_data_no_returns_given_overlap, 4)) * 100}%")
+
+    def _ntile_factor(self, factor: pd.Series, ntiles: int) -> None:
         """
-        Universe relative Quantiles of a factor by day
+        This is slow replaced by
+        Universe relative Quantiles of a factor by day _ntile_factor_sql
 
         pd.DataFrame of ntiled factor
             index: (pd.Period, _asset_id)
@@ -126,22 +153,48 @@ class Ntile:
         """
         # add a filter for if a day has less than 20% factor data then just put bin as -1 for all assets
         # unstack the frame, percentile rank each row, divide whole matrix buy 1/ntiles, take the floor of every number
-        factor = factor.dropna().to_frame('factor')
+        factor = factor[~factor.isnull()].to_frame('factor')
 
         try:
             factor['ntile'] = factor.groupby('date').transform(
                 lambda date_data: ntiles - pd.qcut(date_data, ntiles, labels=False)
-            )
+            ).sort_index()
         except Exception as e:
             print('Hit error while binning data. Need to push the histogram')
             print('Your data is mighty sus we can\'t Ntile it. This is normally due to bad data')
 
             # forcing a histogram out
             import matplotlib.pyplot as plt
-            factor.factor.hist()
+            factor.groupby('date').count().plot()
             plt.show()
 
             raise e
+
+        self._factor_data = factor
+
+    def _ntile_factor_sql(self, factor: pd.Series, ntiles: int) -> None:
+        """
+        Universe relative Quantiles of a factor by day
+        Around 100X faster than pandas groupby qcut
+
+        pd.DataFrame of ntiled factor
+            index: (pd.Period, _asset_id)
+            Columns: (factor, ntile)
+            Values: (factor value, Ntile corresponding to factor value)
+
+        :param factor: same var as ntile_return_tearsheet
+        :param ntiles: same var as ntile_return_tearsheet
+        """
+        factor = factor.to_frame('factor').reset_index()
+        factor['date'] = factor['date'].dt.to_timestamp()
+
+        sql_quantile = f"""SELECT *, NTILE({ntiles}) OVER(PARTITION BY date ORDER BY factor.factor DESC) as ntile
+                            FROM factor
+                            WHERE factor.factor IS NOT NULL"""
+        con = duckdb.connect(':memory:')
+        factor = con.execute(sql_quantile).df()
+        factor['date'] = factor['date'].dt.to_period(freq='D')
+        factor = factor.set_index(['date', 'id'])
 
         self._factor_data = factor
 
@@ -158,7 +211,8 @@ class Ntile:
         # checking to see if we have series or data frame
         if isinstance(factor, pd.DataFrame):
             if factor.shape[1] > 1:  # there is a df passed with multible columns
-                print(f'Running tests on {factor.columns[0]}')
+                raise ValueError('There are multiple columns in the passed DataFrame')
+
             factor_series = factor.iloc[:, 0]
         else:
             factor_series = factor.copy()
@@ -167,6 +221,16 @@ class Ntile:
 
         factor_series.index.names = ['date', 'id']
         self.kick_tears(factor_series, ntiles)
+
+        self._print_start_end_dates()
+
+    def _print_start_end_dates(self):
+        """
+        prints the start and end date of the backtest
+        """
+        date = self._factor_data.index.get_level_values(0)
+        print(f'\nStart Date: {date.min()}')
+        print(f'End Date:   {date.max()}\n')
 
     def kick_tears(self, factor_series: pd.Series, ntiles: int) -> None:
         """
@@ -305,16 +369,17 @@ class Ntile:
         self._run(tears)
         return tears
 
-    def ntile_turnover_tear(self, factor: pd.Series, holding_period: int) -> Dict[str, BaseTear]:
+    def ntile_turnover_tear(self, factor: pd.Series, ntiles: int, holding_period: int) -> Dict[str, BaseTear]:
         """
         Creates visuals showing the turnover over time
         :param factor: The factor values being tested.
            index: (pd.Period, _asset_id)
            values: (factor_value)
+        :param ntiles: the number of ntiles
         :param holding_period: How long we want to hold positions for, represents days
         :return: Dict of TurnoverTear
         """
-        self._prep_for_run(factor, 1)
+        self._prep_for_run(factor, ntiles)
         tears = {'turnover_tear': TurnoverTear(factor_data=self._factor_data, holding_period=holding_period)}
         self._run(tears)
         return tears

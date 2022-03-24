@@ -8,7 +8,8 @@ from .base_portal import BaseGrouperPortalConstant
 
 
 class SectorPortal(BaseGrouperPortalConstant, ABC):
-    def __init__(self, assets: Union[Iterable, str], search_by: str = 'permno', field='gsector'):
+    def __init__(self, assets: Union[Iterable, str], search_by: str = 'permno', field='gsector', con=None,
+                 start_date=None, end_date=None, ):
         """
         :param assets: the assets or universe to get the sector data for
         :param search_by: what is the id of the asset
@@ -17,6 +18,9 @@ class SectorPortal(BaseGrouperPortalConstant, ABC):
         super().__init__(assets, 'GIC Sector')
         self._search_by = search_by
         self._field = field
+        self._con = con
+        self._start_date = start_date
+        self._end_date = end_date
 
         self._group = None
         self._set_sectors()
@@ -41,9 +45,11 @@ class SectorPortal(BaseGrouperPortalConstant, ABC):
         Sets the _sectors in the class
         :return: None
         """
-
-        self._group = QueryConstructor().query_no_date_table(table='ccm.crsp_cstat_link', fields=[self._field], assets=self._assets,
-                                               search_by=self._search_by).fillna(-1)
+        self._group = (QueryConstructor(self._con)
+                       .query_no_date_table(table='link.crsp_cstat_link', fields=[self._field, 'lpermno as permno'],
+                                            assets=self._assets, search_by=self._search_by, start_date=self._start_date,
+                                            end_date=self._end_date)
+                       .df)[self._field].fillna(-1)
 
     @property
     def assets(self) -> List[int]:

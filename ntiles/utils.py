@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import numba as nb
+import duckdb
 from typing import Optional, List, Union
 
 
@@ -136,7 +137,8 @@ def remove_cat_index(frame: Union[pd.Series, pd.DataFrame]) -> Union[pd.Series, 
     return frame
 
 
-def convert_date_to_period(frame: Union[pd.DataFrame, pd.Series], freq: str = 'D', **kwargs) -> Union[pd.DataFrame, pd.Series]:
+def convert_date_to_period(frame: Union[pd.DataFrame, pd.Series], freq: str = 'D', **kwargs) -> Union[
+    pd.DataFrame, pd.Series]:
     """
     converts the date column to a period if the date column is of type timestamp
     if the 'date' column is a period then nothing will be changed
@@ -146,16 +148,46 @@ def convert_date_to_period(frame: Union[pd.DataFrame, pd.Series], freq: str = 'D
     :param freq: the freq for the period
     :return: thr same frame that was passed but 'date' is a partiod.
     """
+    index_names = list(frame.index.names)
+    frame = frame.reset_index()
 
     if 'date' in frame.columns:
         frame['date'] = frame['date'].dt.to_period(freq)
+        frame.set_index(index_names)
         return frame
 
-    if 'date' in frame.index.names:
-        temp_index_df = frame.index.to_frame()
-        temp_index_df['date'] = temp_index_df['date'].dt.to_period(freq)
-        frame.index = pd.MultiIndex.from_frame(temp_index_df)
-        return frame
+    raise ValueError('"date" not found in data frame')
 
-    raise ValueError('Date not found in data frame')
 
+def ntile(factor: pd.Series, ntiles: int, ) -> pd.Series:
+    """
+    Universe relative Quantiles of a factor by day
+    Around 100X faster than pandas groupby qcut
+
+    pd.DataFrame of ntiled factor
+        index: (pd.Period, _asset_id)
+        Columns: (factor, ntile)
+        Values: (factor value, Ntile corresponding to factor value)
+
+    :param factor: same var as ntile_return_tearsheet
+    :param ntiles: same var as ntile_return_tearsheet
+    """
+    factor = factor.to_frame('factor').reset_index()
+    index_names = factor.columns.tolist()
+    index_names.remove('factor')
+
+    date_is_period = isinstance(factor.date.dtype, pd.core.dtypes.dtypes.PeriodDtype)
+    if date_is_period:
+        factor['date'] = factor['date'].dt.to_timestamp()
+
+    sql_quantile = f"""SELECT *, NTILE({ntiles}) OVER(PARTITION BY date ORDER BY factor.factor DESC) as ntile
+                            FROM factor
+                            WHERE factor.factor IS NOT NULL"""
+    con = duckdb.connect(':memory:')
+    factor_ntile = con.execute(sql_quantile).df()
+
+    if date_is_period:
+        factor_ntile['date'] = factor_ntile['date'].dt.to_period(freq='D')
+
+    factor_ntile = factor_ntile.set_index(index_names)
+    return factor_ntile
