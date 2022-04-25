@@ -11,6 +11,11 @@ from ntiles import plotter, stats, utils
 class BacktestTear(BaseTear, ABC):
     """
     Computes returns and stats from the given factor and pricing data
+
+    Upgrades:
+        Have cash account for when security gets delisted and we own it
+        One day holding period
+
     """
 
     def __init__(self, ntile_matrix: pd.DataFrame, daily_returns: pd.DataFrame, ntiles, holding_period: int,
