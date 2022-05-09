@@ -30,6 +30,7 @@ share/python-wheels/
 **/.DS_Store
 test
 MANIFEST
+*.ipynb
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

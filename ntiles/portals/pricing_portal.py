@@ -14,11 +14,11 @@ class PricingPortal(BaseDeltaPortal, ABC):
     """
 
     def __init__(self, assets: Union[Iterable, str], search_by: str, start_date: str, end_date: str,
-                 field: str = 'prc', schema: str = 'CRSP', con=None):
-        super().__init__(assets, pd.Period(start_date), pd.Period(end_date))
+                 field: str = 'prc', table: str = 'CRSP.sd', con=None):
+        super().__init__(assets, pd.Period(start_date), min(pd.Timestamp(end_date), pd.Timestamp('today')).to_period('D'))
         self._search_by = search_by
         self._field = field
-        self._schema = schema
+        self._table = table
         self._con = con
 
         self._pricing = None
@@ -42,9 +42,10 @@ class PricingPortal(BaseDeltaPortal, ABC):
 
     def _get_pricing(self):
         df = (QueryConstructor(sql_con=self._con)
-              .query_timeseries_table(self._schema + '.security_daily', assets=self._assets,
+              .query_timeseries_table(self._table, assets=self._assets,
                                       start_date=str(self._start), end_date=str(self._end), search_by=self._search_by,
-                                      fields=[self._field]).distinct()
+                                      fields=[self._field])
+              .distinct()
               .set_calendar('NYSE')
               .order_by('date')
               .df)

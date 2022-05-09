@@ -185,6 +185,7 @@ def ntile(factor: pd.Series, ntiles: int, ) -> pd.Series:
                             WHERE factor.factor IS NOT NULL"""
     con = duckdb.connect(':memory:')
     factor_ntile = con.execute(sql_quantile).df()
+    con.close()
 
     if date_is_period:
         factor_ntile['date'] = factor_ntile['date'].dt.to_period(freq='D')
