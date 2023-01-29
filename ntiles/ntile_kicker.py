@@ -65,7 +65,7 @@ class Ntile:
         if len(overlapping_periods) == 0:
             raise ValueError('No overlap between PricingPortal dates and factor dates')
         if len(overlapping_periods) < 100:
-            warnings.warn(f'Only {len(overlapping_periods)} common dates between PricingPortal dates and factor')
+            warnings.warn(f'Only {len(overlapping_periods)} common periods between PricingPortal and factor')
 
         # check for multiple observations on a single day for a single asset
         if factor_series.index.duplicated().any():

@@ -131,18 +131,15 @@ def plot_tilt_hist(series, ntile: str, group_name: str, extra_space: bool = True
     plt.show()
 
 
-def plot_timeseries_ic(ic_series: pd.Series, holding_period: int):
+def plot_timeseries_ic(ic_frame: pd.DataFrame, holding_period: int):
     """
     plots the daily time series IC
-    :param ic_series: series of IC to plot index: pd.Period
+    :param ic_frame: frame of IC to plot index: pd.Period
     :param holding_period: how long the holding period is for the IC
     :return: None
     """
-    ic_frame = ic_series.to_frame('IC')
-    ic_frame['1 Month Avg IC'] = ic_frame.rolling(21).mean()
-
     fig, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
-    ic_frame.plot(ax=ax, title=f'IC {holding_period} {ic_series.index.freq.name} Holding Period')
+    ic_frame.plot(ax=ax, title=f'IC {holding_period} {ic_frame.index.freq.name} Holding Period')
     ax.get_lines()[1].set_linewidth(3)
     ax.axhline(0, linestyle='-', color='black', lw=1)
     fig.autofmt_xdate()

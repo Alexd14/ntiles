@@ -54,7 +54,11 @@ class ICTear(BaseTear, ABC):
         forward_returns = self.compute_forward_returns().reindex_like(factor_unstacked)
 
         ic_array = utils.correlation_2d(factor_unstacked.to_numpy(), forward_returns.to_numpy())
-        self.daily_ic = pd.Series(ic_array, index=forward_returns.index)
+        self.daily_ic = pd.Series(ic_array, index=forward_returns.index).to_frame('IC')
+        if self.daily_ic.index.freq.name == 'D':
+            self.daily_ic['1 Month Avg IC'] = self.daily_ic.rolling(21).mean()
+        else:
+            self.daily_ic['1 Year Avg IC'] = self.daily_ic.rolling(12).mean()
 
     def compute_forward_returns(self) -> pd.DataFrame:
         """
@@ -70,14 +74,14 @@ class ICTear(BaseTear, ABC):
         calculates summary stats for the IC data
         :return: None, sets self.ic_stats
         """
-        mean_ic = self.daily_ic.mean()
-        std_ic = self.daily_ic.std()
+        mean_ic = self.daily_ic['IC'].mean()
+        std_ic = self.daily_ic['IC'].std()
         stats = {
             'IC Mean': mean_ic,
-            'IC Median': self.daily_ic.median(),
+            'IC Median': self.daily_ic['IC'].median(),
             'IC Std': std_ic,
             'Risk Adjusted IC': mean_ic / std_ic,
-            'IC Skew': self.daily_ic.skew()
+            'IC Skew': self.daily_ic['IC'].skew()
         }
 
         self.ic_stats = pd.Series(stats).round(3).to_frame(f'{self.holding_period}D').transpose()
