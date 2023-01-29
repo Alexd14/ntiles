@@ -101,11 +101,13 @@ class BacktestTear(BaseTear, ABC):
         out['universe'] = self._compute_daily_ntile_returns(universe_ntile_matrix, universe_returns_matrix, 1, 1)
 
         if self.holding_period != 1:
-            out = pd.DataFrame(out, index=self.ntile_matrix.index[self.holding_period - 2:])
+            index_values = self.ntile_matrix.index[self.holding_period - 2:]
         else:
-            raise ValueError('One day holding period is currently not supported!')
-            #print()
-            #out = pd.DataFrame(out, index=self.ntile_matrix.index)
+            second_date = self.ntile_matrix.index[0]
+            index_values = ([second_date - pd.Timedelta(1, unit=second_date.freq.name)]
+                            + self.ntile_matrix.index.tolist())
+
+        out = pd.DataFrame(out, index=index_values)
 
         if self.market_neutral:
             # subtracting out universe returns
@@ -133,8 +135,10 @@ class BacktestTear(BaseTear, ABC):
         #
         weight_per_day = 1 / np.count_nonzero(ntile_matrix == ntile, axis=1) / holding_period
         if (weight_per_day > .05).any():
-            warnings.warn('We have a asset with daily weight over 5%\nLimiting weight at 5%')
-            weight_per_day = np.minimum(weight_per_day, np.full(weight_per_day.shape, .05))
+            warnings.warn(f'We have {(weight_per_day > .05).sum()} assets in ntile {ntile} '
+                          f'with daily weight over 5%.'
+                          f'Max weight is  {round(weight_per_day.max(), 3)}')
+            # weight_per_day = np.minimum(weight_per_day, np.full(weight_per_day.shape, .05))
 
         raw_daily_weights = np.where(ntile_matrix == ntile, np.expand_dims(weight_per_day, axis=1), 0)
         daily_weights = utils.rolling_sum(raw_daily_weights, holding_period)
