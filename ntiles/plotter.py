@@ -38,7 +38,7 @@ def ntile_return_plot(cum_ntile_returns: pd.DataFrame, title: str):
     return ax
 
 
-def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int):
+def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int, freq: str):
     """
     generates a box plot of the yearly CAGR for each ntile
     :return: matplotlib axis
@@ -46,7 +46,9 @@ def ntile_annual_return_bars(avg_annual_ret: pd.Series, period: int):
     num_ntiles = len(avg_annual_ret)
 
     _, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
-    ax.set(ylabel='% Return', title=f'Annual Return, {period} Day Holding period', xlabel='')
+    ax.set(ylabel='% Return',
+           title=f'Annual Return, {period}{freq} Holding period',
+           xlabel='')
 
     colors = [RETURN_COLOR_MAP(i) for i in np.linspace(0, 1, num_ntiles)]
     ax.bar(avg_annual_ret.index, avg_annual_ret.to_numpy(), color=colors)
@@ -140,7 +142,7 @@ def plot_timeseries_ic(ic_series: pd.Series, holding_period: int):
     ic_frame['1 Month Avg IC'] = ic_frame.rolling(21).mean()
 
     fig, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
-    ic_frame.plot(ax=ax, title=f'IC {holding_period} Day Holding Period')
+    ic_frame.plot(ax=ax, title=f'IC {holding_period} {ic_series.index.freq.name} Holding Period')
     ax.get_lines()[1].set_linewidth(3)
     ax.axhline(0, linestyle='-', color='black', lw=1)
     fig.autofmt_xdate()
@@ -155,7 +157,7 @@ def plot_auto_corr(ac_series: pd.Series, holding_period: int) -> None:
     :return: None
     """
     fig, ax = plt.subplots(1, 1, figsize=MEDIUM_FIGSIZE)
-    ac_series.plot(ax=ax, title=f'Autocorrelation {holding_period} Day Holding Period')
+    ac_series.plot(ax=ax, title=f'Autocorrelation {holding_period}{ac_series.index.freq.name} Holding Period')
     ax.axhline(ac_series.median(), linestyle=(0, (5, 10)), color='black', lw=1)
     fig.autofmt_xdate()
     plt.show()
@@ -175,7 +177,8 @@ def plot_turnover(turn_frame: pd.Series, holding_period: int) -> None:
         ax.plot(turn_frame.index.to_timestamp(), turn_frame[col], color=colors[col - 1], label=f'Ntile: {col}')
         ax.axhline(turn_frame[col].median(), linestyle=(0, (5, 10)), color=colors[col - 1], lw=5)
 
-    ax.set(ylabel='% Turnover', title=f'Turnover {holding_period} Day Holding Period', xlabel='')
+    ax.set(ylabel='% Turnover', title=f'Turnover {holding_period}{turn_frame.index.freq.name} Holding Period',
+           xlabel='')
     ax.legend(loc="center left", bbox_to_anchor=(1, .5))
     fig.autofmt_xdate()
     plt.show()

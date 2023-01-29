@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from .base_portal import BaseDeltaPortal
 
-from toolbox import QueryConstructor
+from toolbox import ConstituteAdjustment, QueryConstructor, SQLConnection
 
 
 class PricingPortal(BaseDeltaPortal, ABC):
@@ -14,8 +14,9 @@ class PricingPortal(BaseDeltaPortal, ABC):
     """
 
     def __init__(self, assets: Union[Iterable, str], search_by: str, start_date: str, end_date: str,
-                 field: str = 'prc', table: str = 'CRSP.sd', con=None):
-        super().__init__(assets, pd.Period(start_date), min(pd.Timestamp(end_date), pd.Timestamp('today')).to_period('D'))
+                 field: str = 'prc', table: str = 'CRSP.sd', con: SQLConnection = None):
+        super().__init__(assets, pd.Period(start_date),
+                         min(pd.Timestamp(end_date), pd.Timestamp('today')).to_period('D'))
         self._search_by = search_by
         self._field = field
         self._table = table
@@ -48,6 +49,7 @@ class PricingPortal(BaseDeltaPortal, ABC):
               .distinct()
               .set_calendar('NYSE')
               .order_by('date')
+              .dropna(self._field)
               .df)
 
         self._pricing = df[self._field].unstack().pct_change(1).iloc[1:]. \

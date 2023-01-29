@@ -36,6 +36,7 @@ class Ntile:
             2) First level must be of type pd.Period
             3) PricingPortal must have data for all Period dates in the series
             4) There can only be one observations for a single asset on a single day
+            4) The factor and pricing have to have the same freq
 
         :param factor_series: the series we are checking
         :return: None
@@ -69,6 +70,10 @@ class Ntile:
         # check for multiple observations on a single day for a single asset
         if factor_series.index.duplicated().any():
             raise ValueError('Multiple factor observations on single day for a single asset')
+
+        # check the pricing and factor freq are the same
+        if factor_series.index.get_level_values('date').freq != self._pricing_portal.delta_data.index.freq:
+            raise ValueError('Factor and pricing dont have the same freq!')
 
     def _set_ntiles_and_returns(self, factor_data: pd.Series, ntiles: int):
         """
@@ -185,6 +190,7 @@ class Ntile:
         :param factor: same var as ntile_return_tearsheet
         :param ntiles: same var as ntile_return_tearsheet
         """
+        factor_freq = factor.index.get_level_values('date').freq
         factor = factor.to_frame('factor').reset_index()
         factor['date'] = factor['date'].dt.to_timestamp()
 
@@ -193,7 +199,7 @@ class Ntile:
                             WHERE factor.factor IS NOT NULL"""
         con = duckdb.connect(':memory:')
         factor = con.execute(sql_quantile).df()
-        factor['date'] = factor['date'].dt.to_period(freq='D')
+        factor['date'] = factor['date'].dt.to_period(freq=factor_freq)
         factor = factor.set_index(['date', 'id'])
 
         self._factor_data = factor

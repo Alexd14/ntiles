@@ -180,8 +180,9 @@ class BacktestTear(BaseTear, ABC):
         avg_annual_ret = stats.CAGR(ntile_cum_ret)
         # ntile plotting
         stats.generate_return_stats(ntile_daily_ret, self.market_neutral)
-        plotter.ntile_return_plot(ntile_cum_ret, f'Ntile Returns {self.holding_period} Day Holding Period')
-        plotter.ntile_annual_return_bars(avg_annual_ret, self.holding_period)
+        freq = ntile_cum_ret.index.freq.name
+        plotter.ntile_return_plot(ntile_cum_ret, f'Ntile Returns {self.holding_period}{freq} Holding Period')
+        plotter.ntile_annual_return_bars(avg_annual_ret, self.holding_period, freq)
 
         if self.long_short:
             # spread stats
@@ -190,7 +191,7 @@ class BacktestTear(BaseTear, ABC):
             # spread plotting
             stats.generate_return_stats(long_short_frame, False)
             plotter.ntile_return_plot(cum_ret[spread_cols],
-                                      f'Long Short Returns {self.holding_period} Day Holding Period')
+                                      f'Long Short Returns {self.holding_period}{freq} Holding Period')
 
     #
     # Data methods

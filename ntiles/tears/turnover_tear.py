@@ -2,6 +2,7 @@ from typing import Union, List
 
 from abc import ABC
 
+import duckdb
 import pandas as pd
 import numpy as np
 
@@ -27,8 +28,10 @@ class TurnoverTear(BaseTear, ABC):
         """
         calculates the data for the tear
         """
+
         self.calculate_autocorrelation()
         self.calculate_turnover()
+
         self.calculate_summary_stats()
 
     def plot(self) -> None:
@@ -57,12 +60,24 @@ class TurnoverTear(BaseTear, ABC):
         """
         # getting frame of only the top and bottom bin
         max_ntile = self._factor_data['ntile'].max()
-        turnover_frame = self._factor_data[self._factor_data['ntile'].isin([1, max_ntile])][['ntile']]
-
+        turnover_frame = self._factor_data[['ntile']][self._factor_data['ntile'].isin([1, max_ntile])]
         turnover_frame['ntile_shifted'] = turnover_frame['ntile'].unstack().shift(self._holding_period).stack()
         turnover_frame['changed'] = turnover_frame['ntile'] != turnover_frame['ntile_shifted']
 
+        # fd = self._factor_data[['ntile']].reset_index()
+        # fd['date'] = fd['date'].dt.to_timestamp()
+        # max_ntile = fd['ntile'].max()
+        # turnover_sql = f"""SELECT "date", "ntile",
+        #                         "ntile" != lag("ntile", {self._holding_period}) OVER (PARTITION BY id ORDER BY "date") as "changed"
+        #                     FROM fd
+        #                     WHERE "ntile" in (1, {max_ntile})"""
+        #
+        # con = duckdb.connect(':memory:')
+        # turnover_frame = con.execute(turnover_sql).df()
+        # con.close()
+
         final_turnover = turnover_frame.groupby(['date', 'ntile']).changed.agg(sum=sum, count=len)
+
         self._turnover = (final_turnover['sum'] / final_turnover['count']).unstack()
 
     def calculate_summary_stats(self) -> None:

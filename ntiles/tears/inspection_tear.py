@@ -51,7 +51,8 @@ class InspectionTear(BaseTear, ABC):
         date_agg = no_index_factor_data.groupby('date')
         date_ntile_agg = no_index_factor_data.groupby(['date', 'ntile'])
 
-        plotter.plot_inspection_data(date_agg.factor.count(), 'Universe Count Of Factor Per Day', 'Count')
-        plotter.plot_inspection_data(date_ntile_agg.factor.count().unstack(), 'Ntile Count of Factor Per Day', 'Count')
+        plotter.plot_inspection_data(date_agg.factor.count(), 'Universe Count Of Factor Per Period', 'Count')
+        plotter.plot_inspection_data(date_ntile_agg.factor.count().unstack(), 'Ntile Count of Factor Per Period',
+                                     'Count')
         plotter.plot_inspection_data(date_ntile_agg.factor.median().unstack(), 'Median Factor Value by Ntile', 'Median',
                                      2)
