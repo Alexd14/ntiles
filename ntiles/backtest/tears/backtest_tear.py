@@ -4,8 +4,8 @@ from abc import ABC
 import numpy as np
 import pandas as pd
 
-from ntiles.tears.base_tear import BaseTear
-from ntiles import plotter, stats, utils
+from ntiles.backtest.tears.base_tear import BaseTear
+from ntiles.backtest import plotter, stats, utils
 
 
 class BacktestTear(BaseTear, ABC):
@@ -104,8 +104,7 @@ class BacktestTear(BaseTear, ABC):
             index_values = self.ntile_matrix.index[self.holding_period - 2:]
         else:
             second_date = self.ntile_matrix.index[0]
-            index_values = ([second_date - pd.Timedelta(1, unit=second_date.freq.name)]
-                            + self.ntile_matrix.index.tolist())
+            index_values = ([second_date - 1] + self.ntile_matrix.index.tolist())
 
         out = pd.DataFrame(out, index=index_values)
 

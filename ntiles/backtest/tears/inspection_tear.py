@@ -1,7 +1,7 @@
 from abc import ABC
 
-from ntiles.tears.base_tear import BaseTear
-from ntiles import plotter
+from ntiles.backtest.tears.base_tear import BaseTear
+from ntiles.backtest import plotter
 
 
 class InspectionTear(BaseTear, ABC):

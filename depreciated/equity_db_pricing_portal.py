@@ -8,8 +8,8 @@ try:
 except ImportError:
     pass
 
-from ntiles.portals.base_portal import BaseDeltaPortal
-
+# from .ntiles.portals.base_portal import BaseDeltaPortal
+from .base_portal import BaseDeltaPortal
 """
 No Longer used. See toolbox for the pricing portal.
 """

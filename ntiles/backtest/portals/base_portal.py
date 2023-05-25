@@ -27,15 +27,17 @@ class BasePortal(ABC):
 class BaseTimeSeriesPortal(BasePortal):
     """portal for time series data"""
 
-    def __init__(self, assets: List[Union[str, int]], start: pd.Period, end: pd.Period):
+    def __init__(self, assets: List[Union[str, int]], start: pd.Period, end: pd.Period, freq: str):
         """
         :param assets: the assets we are querying for
         :param start: start date for the query
         :param end: end date for the query
+        :param freq: frequency of the data
         """
         super().__init__(assets)
         self._start = start
         self._end = end
+        self._freq = freq
 
     @property
     @abstractmethod

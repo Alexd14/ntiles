@@ -28,7 +28,6 @@ share/python-wheels/
 .idea/
 .DS_Store
 **/.DS_Store
-test
 MANIFEST
 *.ipynb
 
@@ -128,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+test/
+depreciated/

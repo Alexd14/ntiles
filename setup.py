@@ -4,12 +4,12 @@ from setuptools import find_packages
 
 setup(
     name='ntiles',
-    version='0.1.5.0',
+    version='0.1.5.1',
     packages=find_packages(),
     license='Apache License 2.0',
     description='Vectorized quantile backtester.',
     url='https://github.com/Alexd14/ntiles-backtester',
-    download_url='https://github.com/Alexd14/ntiles/archive/refs/tags/v1.5.0.tar.gz',
+    download_url='https://github.com/Alexd14/ntiles/archive/refs/tags/v1.5.1.tar.gz',
     keywords=['factor', 'backtesting', 'alphalens', 'vectorized backtesting', 'equity trading'],
     install_requires=[
         'numba',

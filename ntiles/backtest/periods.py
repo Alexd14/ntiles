@@ -1,5 +1,5 @@
 #
-# Taken from https://github.com/Alexd14/empyrical/blob/master/empyrical/periods.py
+# Taken from https://github.com/empyrical/blob/master/empyrical/periods.py
 #
 from typing import Union
 

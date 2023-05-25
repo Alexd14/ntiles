@@ -3,7 +3,7 @@ from typing import Iterable, List, Union
 
 import pandas as pd
 
-from toolbox import QueryConstructor
+from ...toolbox import QueryConstructor
 from .base_portal import BaseGrouperPortalConstant
 
 

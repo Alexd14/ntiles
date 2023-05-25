@@ -3,9 +3,9 @@ from typing import Iterable
 
 import pandas as pd
 
-from ntiles import plotter
-from ntiles.tears.base_tear import BaseTear
-from ntiles import utils
+from ntiles.backtest import plotter
+from ntiles.backtest.tears.base_tear import BaseTear
+from ntiles.backtest import utils
 
 
 class ICTear(BaseTear, ABC):
